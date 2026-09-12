@@ -1,0 +1,30 @@
+# Secrets — MUST stay untracked. See CLAUDE.md § Credentials.
+.env
+.env.local
+*.pem
+
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+
+# Node / Angular
+node_modules/
+web/dist/
+web/.angular/
+npm-debug.log*
+coverage/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
