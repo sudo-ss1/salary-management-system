@@ -31,6 +31,9 @@ Every task's requirements implicitly include this section.
 - **Commit locally. Never push.** No remotes, ever.
 - **No AI attribution in commit messages.** No `Co-authored-by`, no generation trailers, no emoji.
 - **Schema changes are new Flyway migrations.** Never edit an applied one.
+- **Code columns are `varchar(n)`, never `char(n)`.** PostgreSQL blank-pads `char`,
+  which forces `@JdbcTypeCode(SqlTypes.CHAR)` on every mapped field and a `.trim()` on
+  every native-query read. See the Task 3 ruling in the SDD ledger.
 
 ### Pinned enumerations
 
@@ -809,13 +812,13 @@ Expected: FAIL — `CurrencyConverter`, `ConversionResult` and `DomainException`
 `src/main/resources/db/migration/V1__country_and_fx_rate.sql`
 ```sql
 create table country (
-    country_code  char(2)      primary key,
+    country_code  varchar(2)      primary key,
     name          varchar(100) not null,
-    currency_code char(3)      not null
+    currency_code varchar(3)      not null
 );
 
 create table fx_rate (
-    currency_code char(3)       not null,
+    currency_code varchar(3)       not null,
     rate_date     date          not null,
     rate_to_usd   numeric(18,8) not null,
     primary key (currency_code, rate_date),
@@ -1247,7 +1250,7 @@ create table employee (
     full_name       varchar(150) not null,
     email           varchar(255) not null,
     department      varchar(30)  not null,
-    country_code    char(2)      not null references country (country_code),
+    country_code    varchar(2)      not null references country (country_code),
     job_role        varchar(40)  not null,
     job_level       varchar(20)  not null,
     employment_type varchar(20)  not null,
@@ -1593,8 +1596,8 @@ create table pay_band (
     id            bigserial     primary key,
     job_role      varchar(40)   not null,
     job_level     varchar(20)   not null,
-    country_code  char(2)       not null references country (country_code),
-    currency_code char(3)       not null,
+    country_code  varchar(2)       not null references country (country_code),
+    currency_code varchar(3)       not null,
     band_min      numeric(19,4) not null,
     band_mid      numeric(19,4) not null,
     band_max      numeric(19,4) not null,
@@ -1925,7 +1928,7 @@ create table salary (
     id              bigserial     primary key,
     employee_id     bigint        not null references employee (id),
     amount_original numeric(19,4) not null,
-    currency_code   char(3)       not null,
+    currency_code   varchar(3)       not null,
     amount_base_usd numeric(19,4) not null,
     fx_rate         numeric(18,8) not null,
     fx_rate_date    date          not null,
@@ -1946,7 +1949,7 @@ create table salary_history (
     id              bigserial     primary key,
     employee_id     bigint        not null references employee (id),
     amount_original numeric(19,4) not null,
-    currency_code   char(3)       not null,
+    currency_code   varchar(3)       not null,
     amount_base_usd numeric(19,4) not null,
     fx_rate         numeric(18,8) not null,
     fx_rate_date    date          not null,
@@ -4184,7 +4187,7 @@ public class EmployeeListRepository {
                 t.get("job_level", String.class),
                 t.get("status", String.class),
                 new MoneyDto(t.get("amount_original", BigDecimal.class).toPlainString(),
-                        t.get("currency_code", String.class).trim()),
+                        t.get("currency_code", String.class)),
                 new MoneyDto(t.get("amount_base_usd", BigDecimal.class).toPlainString(), "USD"),
                 compaRatio);
     }
@@ -5539,7 +5542,7 @@ import java.util.stream.Collectors;
             Map<String, String> key = new LinkedHashMap<>();
             for (GroupByDimension dimension : groupBy) {
                 Object value = row.get(dimension.key());
-                key.put(dimension.key(), value == null ? null : value.toString().trim());
+                key.put(dimension.key(), value == null ? null : value.toString());
             }
             groups.add(new DistributionGroup(key,
                     ((Number) row.get("headcount")).longValue(),
@@ -5800,13 +5803,13 @@ import com.payscope.salary.CompaRatio;
                 ((Number) row.get("id")).longValue(),
                 row.get("employee_number", String.class),
                 row.get("full_name", String.class),
-                row.get("country_code", String.class).trim(),
+                row.get("country_code", String.class),
                 row.get("job_role", String.class),
                 row.get("job_level", String.class),
                 new MoneyDto(row.get("amount_original", BigDecimal.class).toPlainString(),
-                        row.get("currency_code", String.class).trim()),
+                        row.get("currency_code", String.class)),
                 new MoneyDto(row.get("band_mid", BigDecimal.class).toPlainString(),
-                        row.get("currency_code", String.class).trim()),
+                        row.get("currency_code", String.class)),
                 row.get("compa_ratio", BigDecimal.class))).toList();
 
         return PagedResponse.of(content, page, size, total.longValue());
@@ -6353,14 +6356,14 @@ public class SeedRunner implements ApplicationRunner {
     private Map<String, String> currencyByCountry() {
         Map<String, String> map = new HashMap<>();
         jdbc.query("select country_code, currency_code from country",
-                (rs, rowNum) -> map.put(rs.getString(1).trim(), rs.getString(2).trim()));
+                (rs, rowNum) -> map.put(rs.getString(1), rs.getString(2)));
         return map;
     }
 
     private Map<String, BigDecimal> rateByCurrency() {
         Map<String, BigDecimal> map = new HashMap<>();
         jdbc.query("select currency_code, rate_to_usd from fx_rate where rate_date = ?",
-                (rs, rowNum) -> map.put(rs.getString(1).trim(), rs.getBigDecimal(2)),
+                (rs, rowNum) -> map.put(rs.getString(1), rs.getBigDecimal(2)),
                 Date.valueOf(RATE_DATE));
         return map;
     }
@@ -6369,7 +6372,7 @@ public class SeedRunner implements ApplicationRunner {
         Map<String, BigDecimal> map = new HashMap<>();
         jdbc.query("select job_role, job_level, country_code, band_mid from pay_band",
                 (rs, rowNum) -> map.put(
-                        rs.getString(1) + "|" + rs.getString(2) + "|" + rs.getString(3).trim(),
+                        rs.getString(1) + "|" + rs.getString(2) + "|" + rs.getString(3),
                         rs.getBigDecimal(4)));
         return map;
     }
