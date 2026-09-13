@@ -51,7 +51,16 @@ public class ApiExceptionHandler {
     ProblemDetail onBadParameter(MethodArgumentTypeMismatchException e) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setTitle("Invalid parameter");
-        problem.setDetail(rootMessage(e));
+
+        Class<?> required = e.getRequiredType();
+        if (required != null && required.isEnum()) {
+            String permitted = java.util.Arrays.stream(required.getEnumConstants())
+                    .map(Object::toString).collect(java.util.stream.Collectors.joining(", "));
+            problem.setDetail("'" + e.getValue() + "' is not a valid " + e.getName()
+                    + ". Permitted values: " + permitted);
+        } else {
+            problem.setDetail("'" + e.getValue() + "' is not a valid " + e.getName());
+        }
         return problem;
     }
 

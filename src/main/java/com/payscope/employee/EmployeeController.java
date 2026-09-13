@@ -1,7 +1,9 @@
 package com.payscope.employee;
 
+import com.payscope.common.PagedResponse;
 import com.payscope.employee.dto.CreateEmployeeRequest;
 import com.payscope.employee.dto.EmployeeDetailResponse;
+import com.payscope.employee.dto.EmployeeListItem;
 import com.payscope.employee.dto.UpdateEmployeeRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
@@ -30,6 +33,22 @@ public class EmployeeController {
     ResponseEntity<Void> create(@Valid @RequestBody CreateEmployeeRequest request) {
         Long id = service.create(request);
         return ResponseEntity.created(URI.create("/api/employees/" + id)).build();
+    }
+
+    @GetMapping
+    PagedResponse<EmployeeListItem> list(
+            @RequestParam(required = false) String country,
+            @RequestParam(required = false) Department department,
+            @RequestParam(required = false) Level level,
+            @RequestParam(required = false) EmployeeStatus status,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        return service.search(new EmployeeQuery(country, department, level, status, q, page, size,
+                EmployeeSort.parse(sort), !"desc".equalsIgnoreCase(direction)));
     }
 
     @GetMapping("/{id}")

@@ -4,6 +4,7 @@ import com.payscope.common.DomainException;
 import com.payscope.common.Money;
 import com.payscope.common.MoneyDto;
 import com.payscope.common.NotFoundException;
+import com.payscope.common.PagedResponse;
 import com.payscope.common.StaleVersionException;
 import com.payscope.currency.ConversionResult;
 import com.payscope.currency.Country;
@@ -11,6 +12,7 @@ import com.payscope.currency.CountryRepository;
 import com.payscope.currency.CurrencyConverter;
 import com.payscope.employee.dto.CreateEmployeeRequest;
 import com.payscope.employee.dto.EmployeeDetailResponse;
+import com.payscope.employee.dto.EmployeeListItem;
 import com.payscope.employee.dto.UpdateEmployeeRequest;
 import com.payscope.salary.CompaRatio;
 import com.payscope.salary.PayBand;
@@ -32,16 +34,18 @@ public class EmployeeService {
     private final CurrencyConverter converter;
     private final PayBandRepository bands;
     private final Clock clock;
+    private final EmployeeListRepository listRepository;
 
     public EmployeeService(EmployeeRepository employees, SalaryRepository salaries,
                            CountryRepository countries, CurrencyConverter converter,
-                           PayBandRepository bands, Clock clock) {
+                           PayBandRepository bands, Clock clock, EmployeeListRepository listRepository) {
         this.employees = employees;
         this.salaries = salaries;
         this.countries = countries;
         this.converter = converter;
         this.bands = bands;
         this.clock = clock;
+        this.listRepository = listRepository;
     }
 
     @Transactional
@@ -149,5 +153,10 @@ public class EmployeeService {
             employee.softDelete(clock.instant());
             employees.saveAndFlush(employee);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<EmployeeListItem> search(EmployeeQuery query) {
+        return listRepository.search(query);
     }
 }
