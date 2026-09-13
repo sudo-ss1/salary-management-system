@@ -3,6 +3,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
+import { apiErrorInterceptor } from './core/api-error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -11,7 +12,7 @@ export const appConfig: ApplicationConfig = {
     // fails, this line becomes provideZoneChangeDetection() and nothing else changes.
     provideZonelessChangeDetection(),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([])),
+    provideHttpClient(withInterceptors([apiErrorInterceptor])),
     provideAnimationsAsync(),
   ],
 };
