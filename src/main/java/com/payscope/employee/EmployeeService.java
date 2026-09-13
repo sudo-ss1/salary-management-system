@@ -2,11 +2,17 @@ package com.payscope.employee;
 
 import com.payscope.common.DomainException;
 import com.payscope.common.Money;
+import com.payscope.common.MoneyDto;
+import com.payscope.common.NotFoundException;
 import com.payscope.currency.ConversionResult;
 import com.payscope.currency.Country;
 import com.payscope.currency.CountryRepository;
 import com.payscope.currency.CurrencyConverter;
 import com.payscope.employee.dto.CreateEmployeeRequest;
+import com.payscope.employee.dto.EmployeeDetailResponse;
+import com.payscope.salary.CompaRatio;
+import com.payscope.salary.PayBand;
+import com.payscope.salary.PayBandRepository;
 import com.payscope.salary.Salary;
 import com.payscope.salary.SalaryRepository;
 import org.springframework.stereotype.Service;
@@ -22,14 +28,17 @@ public class EmployeeService {
     private final SalaryRepository salaries;
     private final CountryRepository countries;
     private final CurrencyConverter converter;
+    private final PayBandRepository bands;
     private final Clock clock;
 
     public EmployeeService(EmployeeRepository employees, SalaryRepository salaries,
-                           CountryRepository countries, CurrencyConverter converter, Clock clock) {
+                           CountryRepository countries, CurrencyConverter converter,
+                           PayBandRepository bands, Clock clock) {
         this.employees = employees;
         this.salaries = salaries;
         this.countries = countries;
         this.converter = converter;
+        this.bands = bands;
         this.clock = clock;
     }
 
@@ -70,5 +79,29 @@ public class EmployeeService {
         salaries.saveAndFlush(Salary.create(employee.id(), salary, converted, request.salaryEffectiveFrom()));
 
         return employee.id();
+    }
+
+    @Transactional(readOnly = true)
+    public EmployeeDetailResponse detail(Long id) {
+        Employee employee = employees.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("No employee with id " + id));
+
+        Salary salary = salaries.findByEmployeeId(id)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Employee " + id + " has no current salary, which creation makes impossible"));
+
+        PayBand band = bands.findByRoleAndLevelAndCountryCode(
+                employee.role(), employee.level(), employee.countryCode()).orElse(null);
+
+        return new EmployeeDetailResponse(
+                employee.id(), employee.employeeNumber(), employee.fullName(), employee.email(),
+                employee.department(), employee.countryCode(), employee.role(), employee.level(),
+                employee.employmentType(), employee.hireDate(), employee.status(),
+                MoneyDto.from(salary.original()), MoneyDto.from(salary.baseUsd()), salary.effectiveFrom(),
+                CompaRatio.of(salary.original(), band == null ? null : band.mid()),
+                band == null ? null : MoneyDto.from(band.min()),
+                band == null ? null : MoneyDto.from(band.mid()),
+                band == null ? null : MoneyDto.from(band.max()),
+                employee.version(), salary.version());
     }
 }

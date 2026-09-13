@@ -1,8 +1,11 @@
 package com.payscope.employee;
 
 import com.payscope.employee.dto.CreateEmployeeRequest;
+import com.payscope.employee.dto.EmployeeDetailResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,5 +27,10 @@ public class EmployeeController {
     ResponseEntity<Void> create(@Valid @RequestBody CreateEmployeeRequest request) {
         Long id = service.create(request);
         return ResponseEntity.created(URI.create("/api/employees/" + id)).build();
+    }
+
+    @GetMapping("/{id}")
+    EmployeeDetailResponse detail(@PathVariable Long id) {
+        return service.detail(id);
     }
 }
