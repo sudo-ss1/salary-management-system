@@ -78,6 +78,11 @@ export class InsightsStore {
     this.outlierPage.set(page);
   }
 
+  setOutlierSize(size: number): void {
+    this.outlierSize.set(size);
+    this.outlierPage.set(0);
+  }
+
   setOutlierBand(band: OutlierBand | null): void {
     this.outlierBand.set(band);
     // A narrower band is a shorter list; page 4 of it may not exist.

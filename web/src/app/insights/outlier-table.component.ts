@@ -110,6 +110,10 @@ export class OutlierTableComponent {
   }
 
   protected onPage(event: PageEvent): void {
-    this.store.setOutlierPage(event.pageIndex);
+    if (event.pageSize !== this.store.outlierSize()) {
+      this.store.setOutlierSize(event.pageSize);
+    } else {
+      this.store.setOutlierPage(event.pageIndex);
+    }
   }
 }
