@@ -12,6 +12,7 @@ import { CompaRatioHistogramComponent } from './compa-ratio-histogram.component'
 import { OutlierTableComponent } from './outlier-table.component';
 import { CompaRatioBucketKey, GroupByDimension } from './analytics.models';
 import { titleCase } from '../shared/reference';
+import { groupLabel } from '../shared/group-label';
 
 @Component({
   selector: 'app-insights',
@@ -110,9 +111,8 @@ export class InsightsComponent {
     return state.status === 'ready' ? state.data : [];
   }
 
-  protected groupLabel(group: { key: Record<string, string> }): string {
-    const parts = Object.values(group.key);
-    return parts.length > 0 ? parts.join(' · ') : 'Whole organization';
+  protected groupLabel(group: { key: Readonly<Record<string, string>> }): string {
+    return groupLabel(group.key);
   }
 
   /** Disables the unselected options once two are chosen, so the cap cannot be exceeded. */

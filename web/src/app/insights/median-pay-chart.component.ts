@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { BarChartModule } from '@swimlane/ngx-charts';
 import { formatMoney } from '../core/money';
-import { titleCase } from '../shared/reference';
+import { groupLabel } from '../shared/group-label';
 import { DistributionGroup } from './analytics.models';
 
 export interface ChartPoint {
@@ -40,17 +40,10 @@ export class MedianPayChartComponent {
   readonly series = computed<ChartPoint[]>(() =>
     this.groups()
       .filter(group => !!group.p50)
-      .map(group => ({ name: label(group), value: Number(group.p50!.amount) })),
+      .map(group => ({ name: groupLabel(group.key), value: Number(group.p50!.amount) })),
   );
 
   /** Bound as a method reference, so it must not depend on `this`. */
   readonly formatValue = (value: number): string =>
     formatMoney({ amount: String(value), currency: 'USD' });
-}
-
-function label(group: DistributionGroup): string {
-  const parts = Object.entries(group.key).map(([dimension, value]) =>
-    dimension === 'country' ? value : titleCase(value),
-  );
-  return parts.length > 0 ? parts.join(' · ') : 'Whole organization';
 }
