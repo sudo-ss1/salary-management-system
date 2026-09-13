@@ -200,11 +200,11 @@ export class CreateEmployeeComponent {
 
   form: FormState = { ...EMPTY_FORM };
 
-  protected onCountryChange(code: string): void {
+  onCountryChange(code: string): void {
     this.countryCode.set(code);
   }
 
-  protected onSubmit(): void {
+  onSubmit(): void {
     this.store.create(
       {
         employeeNumber: this.form.employeeNumber,
