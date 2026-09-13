@@ -256,4 +256,37 @@ describe('EmployeeDetailStore', () => {
     const state = store.state();
     expect(state.status === 'ready' && state.data.status).toBe('INACTIVE');
   });
+
+  it('runs the onSuccess callback only after the delete request completes', () => {
+    store.load(7);
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+
+    const onSuccess = jest.fn();
+    store.remove(7, onSuccess);
+    const request = mock.expectOne('/api/employees/7');
+    expect(request.request.method).toBe('DELETE');
+    // Proves the callback is tied to the response, not fired eagerly by
+    // remove() itself - a sibling assertion, not a separate test, so a
+    // version that calls onSuccess synchronously cannot pass unnoticed.
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    request.flush(null);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(store.saving()).toBe(false);
+  });
+
+  it('does not run the onSuccess callback for an employee no longer on screen', () => {
+    store.load(7);
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+
+    const onSuccess = jest.fn();
+    store.remove(7, onSuccess);
+    const staleDelete = mock.expectOne('/api/employees/7');
+
+    store.load(8);
+    mock.expectOne('/api/employees/8').flush({ ...DETAIL, id: 8, employeeNumber: 'E-008', fullName: 'Ben Ortiz' });
+
+    staleDelete.flush(null);
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
 });
