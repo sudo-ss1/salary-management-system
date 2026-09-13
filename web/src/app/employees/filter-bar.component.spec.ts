@@ -16,6 +16,12 @@ describe('FilterBarComponent', () => {
       { country: null, department: null, level: null, status: null });
     fixture.componentRef.setInput('showStatus', showStatus);
     fixture.detectChanges();
+    // MatSelect initialises its selection inside a Promise
+    // (_initializeSelection), so the trigger text is not yet rendered
+    // immediately after detectChanges(). Flush that microtask before
+    // returning the fixture to callers that read the trigger text.
+    await fixture.whenStable();
+    fixture.detectChanges();
     return fixture;
   }
 
