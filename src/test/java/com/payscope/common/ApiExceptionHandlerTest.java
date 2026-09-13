@@ -58,4 +58,33 @@ class ApiExceptionHandlerTest {
         assertThat(problem.getStatus()).isEqualTo(409);
         assertThat(problem.getDetail()).isEqualTo("This change conflicts with data that already exists");
     }
+
+    /**
+     * Not every DataIntegrityViolationException wraps a Hibernate
+     * ConstraintViolationException - a numeric overflow on a numeric(19,4)
+     * column, for example, arrives with a DataException cause instead, so
+     * there is no constraint name at all. The handler must not crash here.
+     */
+    @Test
+    void maps_a_violation_with_no_constraint_name_to_a_generic_conflict() {
+        DataIntegrityViolationException noConstraintName = new DataIntegrityViolationException(
+                "numeric field overflow", new RuntimeException("numeric field overflow"));
+
+        ProblemDetail problem = handler.onConstraintViolation(noConstraintName);
+
+        assertThat(problem.getStatus()).isEqualTo(409);
+        assertThat(problem.getDetail()).isEqualTo("This change conflicts with data that already exists");
+    }
+
+    @Test
+    void maps_a_check_violation_with_no_constraint_name_to_a_bad_request_without_the_word_null() {
+        DataIntegrityViolationException noConstraintName = new DataIntegrityViolationException(
+                "violates check constraint", new RuntimeException("violates check constraint"));
+
+        ProblemDetail problem = handler.onConstraintViolation(noConstraintName);
+
+        assertThat(problem.getStatus()).isEqualTo(400);
+        assertThat(problem.getTitle()).isEqualTo("Rule violation");
+        assertThat(problem.getDetail()).isEqualTo("Rejected by a database rule");
+    }
 }
