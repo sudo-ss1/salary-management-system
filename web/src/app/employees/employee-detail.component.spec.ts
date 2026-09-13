@@ -52,6 +52,10 @@ describe('EmployeeDetailComponent', () => {
     // The number and its explanation belong together, not in a legend elsewhere.
     expect(text).toContain('1.0000');
     expect(text).toContain('₹3,712,500.00'); // band midpoint
+
+    // The @if (store.conflict()) gate is only proven by exercising both
+    // branches - a successful load with no conflict must show no banner.
+    expect(harness.routeNativeElement!.querySelector('[role="alert"]')).toBeNull();
   }));
 
   it('offers a reload rather than retrying when the record changed underneath', fakeAsync(async () => {

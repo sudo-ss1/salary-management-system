@@ -140,12 +140,56 @@ describe('EmployeeDetailStore', () => {
     mock.expectOne('/api/employees/7').flush(DETAIL);
     store.save(7, EDIT);
     mock.expectOne(r => r.method === 'PUT').flush({}, { status: 409, statusText: 'Conflict' });
+    // Load-bearing: proves the conflict was actually set, not merely absent
+    // by coincidence, before the reload is asked to clear it.
     expect(store.conflict()).toBe(true);
 
     store.load(7);
     mock.expectOne('/api/employees/7').flush({ ...DETAIL, employeeVersion: 3 });
 
     expect(store.conflict()).toBe(false);
+    // load() also clears conflict synchronously, before any response arrives -
+    // so the assertion above alone would hold even if this flush were deleted.
+    // Pinning the resulting data to the flushed version proves the reload
+    // itself, not just the synchronous reset, is what the store ends up with.
+    const state = store.state();
+    expect(state.status === 'ready' && state.data.employeeVersion).toBe(3);
+  });
+
+  it('does not let a slow response for an abandoned employee overwrite a newer one', () => {
+    store.load(7);
+    const first = mock.expectOne('/api/employees/7');
+
+    // Navigating on to employee 8 before 7 answers - the component reuses
+    // this store instance across employees, so without cancellation a late
+    // response for 7 could resolve after 8's and repaint the wrong record.
+    store.load(8);
+    const second = mock.expectOne('/api/employees/8');
+
+    // The superseded request must be cancelled, not merely ignored: an
+    // ignored-but-still-in-flight request is still a request left running.
+    expect(first.cancelled).toBe(true);
+
+    second.flush({ ...DETAIL, id: 8, employeeNumber: 'E-008', fullName: 'Ben Ortiz' });
+
+    const state = store.state();
+    expect(state.status === 'ready' && state.data.id).toBe(8);
+    expect(state.status === 'ready' && state.data.fullName).toBe('Ben Ortiz');
+  });
+
+  it('issues a fresh request when the same employee is loaded again', () => {
+    // The retry button and the post-save reload both call load() with the id
+    // already on screen - cancellation must not be mistaken for de-duplication.
+    store.load(7);
+    store.load(7);
+
+    const requests = mock.match('/api/employees/7');
+    expect(requests.length).toBe(2);
+    expect(requests[0].cancelled).toBe(true);
+
+    requests[1].flush(DETAIL);
+    const state = store.state();
+    expect(state.status).toBe('ready');
   });
 
   it('reports a missing employee as not found rather than an empty record', () => {
