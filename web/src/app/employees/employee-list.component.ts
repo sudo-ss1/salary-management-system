@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatButtonModule } from '@angular/material/button';
 import { take } from 'rxjs';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
@@ -20,11 +21,14 @@ import { EmployeeSort, SortDirection } from './employee.models';
   standalone: true,
   imports: [
     RouterLink, MatTableModule, MatPaginatorModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatChipsModule, MoneyPipe, StatePanelComponent, FilterBarComponent,
+    MatSelectModule, MatChipsModule, MatButtonModule, MoneyPipe, StatePanelComponent, FilterBarComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h1>Employees</h1>
+    <div class="header">
+      <h1>Employees</h1>
+      <a mat-flat-button routerLink="/employees/new">Add employee</a>
+    </div>
 
     <mat-form-field appearance="outline" class="search">
       <mat-label>Search name, email or employee number</mat-label>
@@ -110,6 +114,7 @@ import { EmployeeSort, SortDirection } from './employee.models';
       (page)="onPage($event)" />
   `,
   styles: [`
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
     .search { width: 100%; max-width: 32rem; }
     .sort { min-width: 14rem; margin-top: .5rem; }
     table { width: 100%; margin-top: 1rem; }
