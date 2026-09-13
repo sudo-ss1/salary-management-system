@@ -3010,7 +3010,11 @@ class EmployeeDetailApiTest {
     @Test
     void returns_not_found_for_an_id_that_never_existed() throws Exception {
         mvc.perform(get("/api/employees/{id}", 999_999_999L))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                // Assert the problem body, not just the status: an unmapped or
+                // broken route also yields 404, so a status-only assertion would
+                // pass even if this handler were never reached.
+                .andExpect(jsonPath("$.detail").value(containsString("999999999")));
     }
 
     @Test
@@ -3019,7 +3023,11 @@ class EmployeeDetailApiTest {
         mvc.perform(delete("/api/employees/{id}", id));
 
         mvc.perform(get("/api/employees/{id}", id))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                // Assert the problem body, not just the status: an unmapped or
+                // broken route also yields 404, so a status-only assertion would
+                // pass even if this handler were never reached.
+                .andExpect(jsonPath("$.detail").value(containsString(String.valueOf(id))));
     }
 }
 ```
@@ -3234,6 +3242,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -3341,7 +3350,11 @@ class UpdateEmployeeApiTest {
     void returns_not_found_when_updating_an_employee_that_does_not_exist() throws Exception {
         mvc.perform(put("/api/employees/{id}", 999_999_999L).contentType(APPLICATION_JSON)
                         .content(updateBody("Ghost", "STAFF", 0)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                // Assert the problem body, not just the status: an unmapped or
+                // broken route also yields 404, so a status-only assertion would
+                // pass even if this handler were never reached.
+                .andExpect(jsonPath("$.detail").value(containsString("999999999")));
     }
 }
 ```
@@ -4494,7 +4507,11 @@ class RecordSalaryApiTest {
 
         mvc.perform(post("/api/employees/{id}/salary", id).contentType(APPLICATION_JSON)
                         .content(raiseBody("4640625.00", "INR", "2026-01-01", 0)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                // Assert the problem body, not just the status: an unmapped or
+                // broken route also yields 404, so a status-only assertion would
+                // pass even if this handler were never reached.
+                .andExpect(jsonPath("$.detail").value(containsString(String.valueOf(id))));
     }
 
     @Test
