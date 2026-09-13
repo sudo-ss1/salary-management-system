@@ -13,6 +13,13 @@ export const routes: Routes = [
       import('./employees/employee-list.component').then(m => m.EmployeeListComponent),
   },
   {
+    // Must precede employees/:id - otherwise the router would match "new" as
+    // an :id and route here to the detail screen instead.
+    path: 'employees/new',
+    loadComponent: () =>
+      import('./employees/create-employee.component').then(m => m.CreateEmployeeComponent),
+  },
+  {
     path: 'employees/:id',
     loadComponent: () =>
       import('./employees/employee-detail.component').then(m => m.EmployeeDetailComponent),
