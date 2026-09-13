@@ -155,6 +155,18 @@ describe('InsightsStore', () => {
     flushAll();
   }));
 
+  it('re-issues all three requests on reload, so the dead retry button gets fixed at the source', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    store.reload();
+    settle();
+
+    expect(mock.match(r => r.url === '/api/analytics/summary').length).toBe(1);
+    expect(mock.match(r => r.url === '/api/analytics/distribution').length).toBe(1);
+    expect(mock.match(r => r.url === '/api/analytics/outliers').length).toBe(1);
+  }));
+
   it('exposes an error state per view, so one failure does not blank the screen', fakeAsync(() => {
     settle();
     mock.expectOne(r => r.url === '/api/analytics/summary').flush(SUMMARY);
