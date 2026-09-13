@@ -4,29 +4,61 @@ Salary management and pay insights for an HR team operating across several
 countries. See `requirements.md` for scope and `docs/superpowers/specs/` for the
 design.
 
+## Prerequisites
+
+- Docker, for the composed stack and for `./mvnw test` (Testcontainers).
+- Node 20.19+ or 22.12+ and npm, to run the frontend outside Docker. Angular
+  CLI 20.3 (see `web/package.json`) requires it; this repo is built and
+  tested on Node 22.
+
 ## Run it
 
-    docker compose up
+    docker compose up --build
 
-The API comes up on http://localhost:8080 with 10,000 seeded employees. First
-build takes a few minutes; subsequent starts are seconds.
+This builds and starts the whole stack: `db` (Postgres), `api` (Spring Boot,
+seeding 10,000 employees), and `web` (the Angular app, built and served by
+nginx). Open http://localhost:4200. First build takes a few minutes;
+subsequent starts are seconds.
 
-Seeding runs just after the web server starts accepting requests, so a request
-issued in the first second or so can return `"headcount": 0`. That is the seed
-still running, not a failure - retry and it will report 10,000.
+Seeding runs just after the API starts accepting requests, so a request issued
+in the first second or so can return `"headcount": 0`. That is the seed still
+running, not a failure - retry and it will report 10,000.
 
-To run against a local database instead:
+### Dev mode
 
-    docker compose up db
+Run the backend and frontend as two separate local processes instead, each
+with live reload:
+
+    ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+    npm start --prefix web
+
+The frontend dev server (`ng serve`, port 4200) proxies `/api` to
+`localhost:8080` via `web/proxy.conf.json`. That is a dev-server-only
+mechanism and separate from how the composed stack above routes `/api` —
+there, the `web` container's nginx proxies it to the `api` service instead;
+`proxy.conf.json` plays no part in a production build.
+
+To run the backend against a containerized database instead of a local
+Postgres, publish its port for that one session — the composed `db` service
+doesn't publish one by default (see Troubleshooting):
+
+    docker compose run --rm -p 5432:5432 db
     ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
 ## Test it
 
     ./mvnw test
+    npm test --prefix web
 
-Tests run against a real PostgreSQL via Testcontainers, so Docker must be
-running. H2 is deliberately not used: the design depends on `percentile_cont`,
-partial unique indexes and `SELECT ... FOR SHARE`, none of which H2 reproduces.
+Backend tests run against a real PostgreSQL via Testcontainers, so Docker must
+be running. H2 is deliberately not used: the design depends on
+`percentile_cont`, partial unique indexes and `SELECT ... FOR SHARE`, none of
+which H2 reproduces.
+
+Frontend tests run under Jest, which type-checks the TypeScript it transpiles
+but not Angular templates. `npx ng build` (run from `web/`) is the only
+command that type-checks templates — a green `npm test` does not guarantee the
+app builds; a template-only error has shipped as a build break before.
 
 ## API
 
@@ -92,3 +124,13 @@ machine's API version would break hosts that negotiate correctly on their own.
 after deleting or renaming a migration file — a stale compiled copy is left
 behind in `target/classes` and Flyway sees two migrations claiming the same
 version. Run `./mvnw clean` to remove it.
+
+**Nothing published on 5432.** The composed `db` service deliberately does not
+publish its port to the host — `api` reaches it by service name over the
+compose network, and publishing 5432 is the most common reason `docker
+compose up` fails outright on a developer machine (`Bind for 0.0.0.0:5432
+failed: port is already allocated`), since most already run a Postgres of
+their own on it. If you need host access to the containerized database (see
+Dev mode above), publish it yourself for that session with
+`docker compose run --rm -p 5432:5432 db`, picking a different host-side port
+if 5432 is already taken on your machine too.
