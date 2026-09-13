@@ -13,6 +13,28 @@ export const COUNTRIES: readonly Option[] = [
   { value: 'BR', label: 'Brazil' },
 ];
 
+/**
+ * Mirrors the `country` table's currency_code column, seeded in
+ * src/main/resources/db/migration/V1__country_and_fx_rate.sql - that
+ * migration is the sole authority on which currency each country is paid in,
+ * the same pattern shared/compa-ratio-bands.ts uses for the band edges. A
+ * salary's currency must never be a free choice: EmployeeService rejects any
+ * salary whose currency does not match the employee's country, so this is
+ * derived rather than offered as a separate field.
+ */
+const COUNTRY_CURRENCIES: Readonly<Record<string, string>> = {
+  US: 'USD',
+  GB: 'GBP',
+  IN: 'INR',
+  DE: 'EUR',
+  SG: 'SGD',
+  BR: 'BRL',
+};
+
+export function currencyForCountry(countryCode: string): string | undefined {
+  return COUNTRY_CURRENCIES[countryCode];
+}
+
 export const DEPARTMENTS: readonly Option[] = [
   'ENGINEERING', 'PRODUCT', 'DESIGN', 'SALES', 'MARKETING', 'FINANCE', 'PEOPLE', 'SUPPORT',
 ].map(value => ({ value, label: titleCase(value) }));
