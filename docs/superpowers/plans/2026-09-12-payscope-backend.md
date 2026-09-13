@@ -31,6 +31,10 @@ Every task's requirements implicitly include this section.
 - **Commit locally. Never push.** No remotes, ever.
 - **No AI attribution in commit messages.** No `Co-authored-by`, no generation trailers, no emoji.
 - **Schema changes are new Flyway migrations.** Never edit an applied one.
+- **Every `percentile_cont` result is cast to `numeric` before rounding.** PostgreSQL
+  defines `percentile_cont` only over `double precision` and `interval`, so a `numeric`
+  column casts implicitly and `round(double precision, integer)` does not exist - the
+  query will not prepare without the cast. See ADR-0008.
 - **Money read from a native query goes through `Money.of` before reaching the wire.**
   Amount columns are `numeric(19,4)`, so the driver returns scale 4 whatever the
   currency's minor units are. Emitting that raw puts `"3712500.0000"` on the wire.
@@ -5653,13 +5657,13 @@ import java.util.stream.Collectors;
         // a single payload never carries two percentile methods - ADR-0003.
         String sql = "select " + (selectedColumns.isEmpty() ? "" : selectedColumns + ",\n       ") + """
                 count(*) as headcount,
-                       round(percentile_cont(0.25) within group (order by s.amount_base_usd), 2) as p25,
-                       round(percentile_cont(0.50) within group (order by s.amount_base_usd), 2) as p50,
-                       round(percentile_cont(0.75) within group (order by s.amount_base_usd), 2) as p75,
-                       round(percentile_cont(0.90) within group (order by s.amount_base_usd), 2) as p90,
+                       round(cast(percentile_cont(0.25) within group (order by s.amount_base_usd) as numeric), 2) as p25,
+                       round(cast(percentile_cont(0.50) within group (order by s.amount_base_usd) as numeric), 2) as p50,
+                       round(cast(percentile_cont(0.75) within group (order by s.amount_base_usd) as numeric), 2) as p75,
+                       round(cast(percentile_cont(0.90) within group (order by s.amount_base_usd) as numeric), 2) as p90,
                        round(avg(s.amount_base_usd), 2) as mean,
-                       round(percentile_cont(0.50) within group (
-                               order by s.amount_original / b.band_mid), 4) as median_compa_ratio
+                       round(cast(percentile_cont(0.50) within group (
+                               order by s.amount_original / b.band_mid) as numeric), 4) as median_compa_ratio
                 """ + FROM_AND_WHERE + groupClause;
 
         @SuppressWarnings("unchecked")
