@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: payscope
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payscope?reWriteBatchedInserts=true
+    username: payscope
+    password: payscope
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+        jdbc:
+          batch_size: 1000
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+payscope:
+  seed:
+    enabled: false
+
+server:
+  error:
+    include-stacktrace: never
