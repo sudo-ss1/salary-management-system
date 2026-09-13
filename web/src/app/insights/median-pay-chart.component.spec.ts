@@ -64,7 +64,7 @@ describe('MedianPayChartComponent', () => {
     expect(fixture.componentInstance.series()).toEqual([]);
   });
 
-  it('renders an svg, proving the chart library works without zone.js', async () => {
+  it('renders an svg on the initial render with no ResizeObserver polyfill or async tick needed', async () => {
     const fixture = await render(GROUPS);
     expect(fixture.nativeElement.querySelector('svg')).toBeTruthy();
   });
