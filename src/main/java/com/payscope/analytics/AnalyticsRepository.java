@@ -2,8 +2,12 @@ package com.payscope.analytics;
 
 import com.payscope.analytics.dto.CompaRatioBucket;
 import com.payscope.analytics.dto.DistributionGroup;
+import com.payscope.analytics.dto.OutlierItem;
 import com.payscope.analytics.dto.SummaryResponse;
+import com.payscope.common.Money;
 import com.payscope.common.MoneyDto;
+import com.payscope.common.PagedResponse;
+import com.payscope.salary.CompaRatio;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
@@ -12,6 +16,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Currency;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,5 +150,60 @@ public class AnalyticsRepository {
                 .setParameter("role", f.role() == null ? null : f.role().name())
                 .setParameter("level", f.level() == null ? null : f.level().name())
                 .setParameter("status", f.status() == null ? null : f.status().name());
+    }
+
+    /**
+     * An inner join to pay_band, not a left join: an employee with no band has a
+     * null compa-ratio and is never an outlier. The boundaries are inclusive, so
+     * exactly 0.80 and exactly 1.20 are inside the window.
+     */
+    private static final String OUTLIER_PREDICATE = """
+              and b.band_mid is not null
+              and (s.amount_original / b.band_mid < :low or s.amount_original / b.band_mid > :high)
+            """;
+
+    public PagedResponse<OutlierItem> outliers(AnalyticsFilter filter, int page, int size) {
+        String sql = """
+                select e.id, e.employee_number, e.full_name, e.country_code, e.job_role, e.job_level,
+                       s.amount_original, s.currency_code, b.band_mid,
+                       round(s.amount_original / b.band_mid, 4) as compa_ratio
+                """ + FROM_AND_WHERE + OUTLIER_PREDICATE + """
+                order by compa_ratio asc, e.id asc
+                limit :size offset :offset
+                """;
+
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = bindOutlier(em.createNativeQuery(sql, Tuple.class), filter)
+                .setParameter("size", size)
+                .setParameter("offset", page * size)
+                .getResultList();
+
+        Number total = (Number) bindOutlier(
+                em.createNativeQuery("select count(*) " + FROM_AND_WHERE + OUTLIER_PREDICATE), filter)
+                .getSingleResult();
+
+        List<OutlierItem> content = rows.stream().map(row -> new OutlierItem(
+                ((Number) row.get("id")).longValue(),
+                row.get("employee_number", String.class),
+                row.get("full_name", String.class),
+                row.get("country_code", String.class),
+                row.get("job_role", String.class),
+                row.get("job_level", String.class),
+                // Rescaled through Money, not emitted raw: these are numeric(19,4)
+                // columns and would otherwise carry four decimal places for a
+                // currency with two. Same reason as the list projection.
+                MoneyDto.from(Money.of(row.get("amount_original", BigDecimal.class),
+                        Currency.getInstance(row.get("currency_code", String.class)))),
+                MoneyDto.from(Money.of(row.get("band_mid", BigDecimal.class),
+                        Currency.getInstance(row.get("currency_code", String.class)))),
+                row.get("compa_ratio", BigDecimal.class))).toList();
+
+        return PagedResponse.of(content, page, size, total.longValue());
+    }
+
+    private Query bindOutlier(Query query, AnalyticsFilter filter) {
+        return bind(query, filter)
+                .setParameter("low", CompaRatio.LOW)
+                .setParameter("high", CompaRatio.HIGH);
     }
 }
