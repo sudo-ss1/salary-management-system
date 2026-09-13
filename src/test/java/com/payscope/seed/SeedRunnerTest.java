@@ -127,4 +127,63 @@ class SeedRunnerTest {
 
         assertThat(countries).isEqualTo(6);
     }
+
+    @Test
+    void pays_an_unbanded_principal_more_than_a_banded_senior_in_the_same_role() {
+        // RECRUITER, SUPPORT_SPECIALIST and ACCOUNTANT have no PRINCIPAL band -
+        // the deliberate gap in V3__pay_band.sql. Before the fix, the fallback was
+        // a flat $50,000-equivalent regardless of level, so an unbanded principal
+        // could earn roughly what a junior earns. Compared on amount_base_usd so
+        // the comparison is currency-neutral across countries.
+        seeder.seed();
+
+        BigDecimal principalAvg = jdbc.queryForObject("""
+                select avg(s.amount_base_usd) from employee e join salary s on s.employee_id = e.id
+                where e.job_level = 'PRINCIPAL'
+                  and e.job_role in ('RECRUITER', 'SUPPORT_SPECIALIST', 'ACCOUNTANT')
+                """, BigDecimal.class);
+        BigDecimal seniorAvg = jdbc.queryForObject("""
+                select avg(s.amount_base_usd) from employee e join salary s on s.employee_id = e.id
+                where e.job_level = 'SENIOR'
+                  and e.job_role in ('RECRUITER', 'SUPPORT_SPECIALIST', 'ACCOUNTANT')
+                """, BigDecimal.class);
+
+        assertThat(principalAvg).isNotNull();
+        assertThat(seniorAvg).isNotNull();
+        assertThat(principalAvg).isGreaterThan(seniorAvg);
+    }
+
+    @Test
+    void never_dates_a_raise_before_employment_or_leaves_everyone_unraised_since_hire() {
+        // Every history period must fall within employment and be non-inverted,
+        // and the current salary must have started somewhere between the hire
+        // date and today - not frozen at the hire date for eleven years.
+        seeder.seed();
+
+        Integer badHistory = jdbc.queryForObject("""
+                select count(*) from salary_history h
+                join employee e on e.id = h.employee_id
+                where h.effective_from < e.hire_date
+                   or h.effective_from >= h.effective_to
+                """, Integer.class);
+        assertThat(badHistory).isZero();
+
+        Integer badCurrent = jdbc.queryForObject("""
+                select count(*) from salary s
+                join employee e on e.id = s.employee_id
+                where s.effective_from < e.hire_date
+                   or s.effective_from > current_date
+                """, Integer.class);
+        assertThat(badCurrent).isZero();
+
+        Integer everyoneUnraised = jdbc.queryForObject("""
+                select count(*) from salary s
+                join employee e on e.id = s.employee_id
+                where s.effective_from = e.hire_date
+                """, Integer.class);
+        // Some very recently hired employees legitimately still have
+        // effective_from == hire_date; the whole population must not.
+        Integer total = jdbc.queryForObject("select count(*) from salary", Integer.class);
+        assertThat(everyoneUnraised).isLessThan(total);
+    }
 }
