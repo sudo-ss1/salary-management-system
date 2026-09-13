@@ -69,7 +69,7 @@ class EmployeeDetailApiTest {
         long id = create("E-3003", "d3@acme.test", "3712500.00", "INR", "IN", "SOFTWARE_ENGINEER", "SENIOR");
 
         mvc.perform(get("/api/employees/{id}", id))
-                .andExpect(jsonPath("$.compaRatio").value(1.0000))
+                .andExpect(jsonPath("$.compaRatio").value("1.0000"))
                 .andExpect(jsonPath("$.bandMid.amount").value("3712500.00"));
     }
 
@@ -79,7 +79,7 @@ class EmployeeDetailApiTest {
         long id = create("E-3004", "d4@acme.test", "2970000.00", "INR", "IN", "SOFTWARE_ENGINEER", "SENIOR");
 
         mvc.perform(get("/api/employees/{id}", id))
-                .andExpect(jsonPath("$.compaRatio").value(0.8000));
+                .andExpect(jsonPath("$.compaRatio").value("0.8000"));
     }
 
     @Test

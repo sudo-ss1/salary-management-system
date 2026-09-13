@@ -74,7 +74,7 @@ class UpdateEmployeeApiTest {
                 .content(updateBody("Asha Menon", "updated2@acme.test", "STAFF", 0)));
 
         mvc.perform(get("/api/employees/{id}", id))
-                .andExpect(jsonPath("$.compaRatio").value(0.6988));
+                .andExpect(jsonPath("$.compaRatio").value("0.6988"));
     }
 
     @Test

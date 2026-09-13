@@ -58,7 +58,7 @@ class RecordSalaryApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.salary.amount").value("4640625.00"))
                 .andExpect(jsonPath("$.salaryBaseUsd.amount").value("55687.50"))
-                .andExpect(jsonPath("$.compaRatio").value(1.2500))
+                .andExpect(jsonPath("$.compaRatio").value("1.2500"))
                 .andExpect(jsonPath("$.salaryVersion").value(1));
     }
 

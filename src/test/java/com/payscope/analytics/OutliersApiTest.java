@@ -43,11 +43,11 @@ class OutliersApiTest {
     void orders_the_most_underpaid_first_so_the_worst_case_is_at_the_top() throws Exception {
         mvc.perform(get("/api/analytics/outliers"))
                 .andExpect(jsonPath("$.content[0].employeeNumber").value("F-U1"))
-                .andExpect(jsonPath("$.content[0].compaRatio").value(0.7000))
+                .andExpect(jsonPath("$.content[0].compaRatio").value("0.7000"))
                 .andExpect(jsonPath("$.content[1].employeeNumber").value("F-I3"))
-                .andExpect(jsonPath("$.content[1].compaRatio").value(1.2500))
+                .andExpect(jsonPath("$.content[1].compaRatio").value("1.2500"))
                 .andExpect(jsonPath("$.content[2].employeeNumber").value("F-U4"))
-                .andExpect(jsonPath("$.content[2].compaRatio").value(1.3000));
+                .andExpect(jsonPath("$.content[2].compaRatio").value("1.3000"));
     }
 
     @Test

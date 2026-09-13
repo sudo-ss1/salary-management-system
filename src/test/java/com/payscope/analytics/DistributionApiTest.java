@@ -97,7 +97,7 @@ class DistributionApiTest {
         // US compa-ratios are 0.70, 1.00, 1.00, 1.30 - the unbanded employee
         // contributes nothing. The median of those four is 1.0000.
         mvc.perform(get("/api/analytics/distribution").param("groupBy", "COUNTRY"))
-                .andExpect(jsonPath(US + ".medianCompaRatio").value(1.0000));
+                .andExpect(jsonPath(US + ".medianCompaRatio").value("1.0000"));
     }
 
     @Test
