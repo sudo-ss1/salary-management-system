@@ -56,10 +56,11 @@ class SummaryApiTest {
     @Test
     void buckets_every_banded_employee_by_compa_ratio() throws Exception {
         // 11 banded employees: 0.70 | 0.80 0.80 | 0.90 1.00 1.00 1.00 | 1.10 1.20 | 1.25 1.30
+        // The five counts must sum to 11. They are 1 + 2 + 4 + 2 + 2.
         mvc.perform(get("/api/analytics/summary"))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'LT_80')].headcount").value(1))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B80_90')].headcount").value(2))
-                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B90_110')].headcount").value(5))
+                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B90_110')].headcount").value(4))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B110_120')].headcount").value(2))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'GT_120')].headcount").value(2));
     }
