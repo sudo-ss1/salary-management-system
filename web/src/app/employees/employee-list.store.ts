@@ -44,7 +44,7 @@ export class EmployeeListStore {
    * switchMap is the frontend's race condition, closed. Without it a slow
    * response for an abandoned query can resolve last and repaint the table.
    */
-  readonly state = toSignal<RequestState<EmployeePage>>(
+  readonly state = toSignal(
     toObservable(this.query).pipe(
       switchMap(query =>
         this.api.list(query).pipe(
