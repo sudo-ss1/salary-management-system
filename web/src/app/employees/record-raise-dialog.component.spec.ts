@@ -109,6 +109,32 @@ describe('RecordRaiseDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('must take effect after');
   });
 
+  it('shows the server field errors next to the offending inputs, mapping the nested salary.amount key', () => {
+    const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.form = { amount: '', effectiveFrom: '', changeReason: '' };
+
+    fixture.componentInstance.submit();
+    mock.expectOne('/api/employees/7/salary').flush(
+      {
+        title: 'Bad Request',
+        detail: 'One or more fields are invalid',
+        errors: [
+          { field: 'effectiveFrom', message: 'must not be null' },
+          { field: 'salary.amount', message: 'must be a valid amount' },
+        ],
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    fixture.detectChanges();
+
+    expect(dialogRef.close).not.toHaveBeenCalled();
+    // The user is told what to do, not merely that something is wrong.
+    expect(fixture.nativeElement.textContent).toContain('must not be null');
+    expect(fixture.nativeElement.textContent).toContain('must be a valid amount');
+    expect(fixture.nativeElement.textContent).not.toContain('One or more fields are invalid');
+  });
+
   it('reports a replayed submission as a conflict rather than applying it twice', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
