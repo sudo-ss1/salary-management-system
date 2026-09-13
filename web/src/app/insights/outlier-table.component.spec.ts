@@ -105,6 +105,23 @@ describe('OutlierTableComponent', () => {
     mock.expectNone(r => r.url === '/api/analytics/outliers');
   }));
 
+  it('asks the server for the new page size instead of silently keeping the old one', fakeAsync(() => {
+    const fixture = render();
+    tick();
+    flushSharedStoreRequests();
+    mock.expectOne(r => r.url === '/api/analytics/outliers').flush(PAGE);
+
+    // Choosing "100 per page" must actually request size=100 - not merely
+    // relabel the paginator while the table keeps showing 25 rows.
+    fixture.componentInstance['onPage']({ pageIndex: 0, pageSize: 100, length: 191 });
+    tick();
+
+    const request = mock.expectOne(r => r.url === '/api/analytics/outliers');
+    expect(request.request.params.get('size')).toBe('100');
+    expect(request.request.params.get('page')).toBe('0');
+    request.flush({ content: [], page: 0, size: 100, totalElements: 191, totalPages: 2 });
+  }));
+
   it('says everyone is within band rather than showing an empty table', fakeAsync(() => {
     const fixture = render();
     tick();

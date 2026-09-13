@@ -138,6 +138,23 @@ describe('InsightsStore', () => {
     flushAll();
   }));
 
+  it('returns the outlier list to its first page when the page size changes', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    store.setOutlierPage(3);
+    settle();
+    mock.expectOne(r => r.params.get('page') === '3').flush(
+      { content: [], page: 3, size: 25, totalElements: 0, totalPages: 0 });
+
+    store.setOutlierSize(100);
+    settle();
+    const request = mock.expectOne(r => r.url === '/api/analytics/outliers');
+    expect(request.request.params.get('page')).toBe('0');
+    expect(request.request.params.get('size')).toBe('100');
+    flushAll();
+  }));
+
   it('exposes an error state per view, so one failure does not blank the screen', fakeAsync(() => {
     settle();
     mock.expectOne(r => r.url === '/api/analytics/summary').flush(SUMMARY);
