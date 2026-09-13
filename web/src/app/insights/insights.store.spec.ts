@@ -180,4 +180,113 @@ describe('InsightsStore', () => {
     expect(store.distribution().status).toBe('error');
     expect(store.outliers().status).toBe('ready');
   }));
+
+  it('round-trips filters, group-by and the outlier band through url query parameters', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    store.setFilter('country', 'IN');
+    store.setFilter('level', 'SENIOR');
+    store.setGroupBy(['COUNTRY', 'LEVEL']);
+    store.setOutlierBand('LT_80');
+    store.setOutlierPage(2);
+    settle();
+    flushAll();
+
+    const params = store.toQueryParams();
+    expect(params).toEqual({
+      country: 'IN', level: 'SENIOR', groupBy: ['COUNTRY', 'LEVEL'], outlierBand: 'LT_80', outlierPage: 2,
+    });
+
+    // Clear everything, then restore from the params alone - the round trip
+    // a bookmarked URL actually makes.
+    store.applyQueryParams({});
+    expect(store.country()).toBeNull();
+    expect(store.level()).toBeNull();
+    expect(store.groupBy()).toEqual(['COUNTRY']);
+    expect(store.outlierBand()).toBeNull();
+    expect(store.outlierPage()).toBe(0);
+    settle();
+    flushAll();
+
+    store.applyQueryParams(params);
+    expect(store.country()).toBe('IN');
+    expect(store.level()).toBe('SENIOR');
+    expect(store.groupBy()).toEqual(['COUNTRY', 'LEVEL']);
+    expect(store.outlierBand()).toBe('LT_80');
+    expect(store.outlierPage()).toBe(2);
+    settle();
+    flushAll();
+  }));
+
+  it('omits the default group-by and a cleared outlier band from the url, so a clean view has a clean url', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    expect(store.toQueryParams()).toEqual({});
+  }));
+
+  it('caps a hand-edited url asking for three group-by dimensions at two, rather than throwing', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    expect(() => store.applyQueryParams({ groupBy: ['COUNTRY', 'LEVEL', 'ROLE'] })).not.toThrow();
+    expect(store.groupBy()).toEqual(['COUNTRY', 'LEVEL']);
+    settle();
+    flushAll();
+  }));
+
+  it('falls back to the default group-by when the url names a dimension the control does not offer', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    store.applyQueryParams({ groupBy: 'BOGUS' });
+    expect(store.groupBy()).toEqual(['COUNTRY']);
+    settle();
+    flushAll();
+  }));
+
+  it('falls back to no outlier band when the url names an in-band bucket, which is not a valid band', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    // B90_110 is a real compa-ratio bucket key, just not one of the two the
+    // outliers endpoint accepts - forwarding it would be a 400 the user
+    // cannot act on.
+    store.applyQueryParams({ outlierBand: 'B90_110' });
+    expect(store.outlierBand()).toBeNull();
+    settle();
+    flushAll();
+  }));
+
+  it('leaves the outlier page alone when the band is set to the value it already has', fakeAsync(() => {
+    settle();
+    flushAll();
+
+    store.setOutlierBand('LT_80');
+    settle();
+    mock.expectOne(r => r.url === '/api/analytics/outliers').flush(
+      { content: [], page: 0, size: 25, totalElements: 0, totalPages: 0 });
+
+    store.setOutlierPage(2);
+    settle();
+    mock.expectOne(r => r.params.get('page') === '2').flush(
+      { content: [], page: 2, size: 25, totalElements: 0, totalPages: 0 });
+
+    // Re-affirming the same band - exactly what restoring selectedBucket
+    // from the store on mount does - must not silently reset the page back
+    // to 0 underneath a page a person (or a restored URL) is already on.
+    store.setOutlierBand('LT_80');
+    expect(store.outlierPage()).toBe(2);
+  }));
+
+  it('falls back to the first outlier page when the query parameter is malformed', () => {
+    // A hand-edited or stale bookmarked URL is exactly what this method
+    // exists to survive - it must not forward "NaN" to the server.
+    store.applyQueryParams({ outlierPage: 'banana' });
+    expect(store.outlierPage()).toBe(0);
+
+    store.applyQueryParams({ outlierPage: '-1' });
+    expect(store.outlierPage()).toBe(0);
+  });
 });
