@@ -124,6 +124,7 @@ public class ApiExceptionHandler {
         problem.setDetail(constraint == null
                 ? GENERIC_CONFLICT
                 : UNIQUE_CONFLICTS.getOrDefault(constraint, GENERIC_CONFLICT));
+        problem.setProperty("conflictKind", "UNIQUE_CONSTRAINT");
         return problem;
     }
 
@@ -132,6 +133,7 @@ public class ApiExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problem.setTitle("Conflict");
         problem.setDetail("This record changed since you loaded it. Reload and try again.");
+        problem.setProperty("conflictKind", "STALE_VERSION");
         if (e instanceof ObjectOptimisticLockingFailureException lock && lock.getIdentifier() != null) {
             problem.setProperty("conflictedId", lock.getIdentifier());
         }
