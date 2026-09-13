@@ -119,8 +119,8 @@ describe('RecordRaiseDialogComponent', () => {
     fixture.detectChanges();
 
     const cancelButton: HTMLButtonElement | null =
-      Array.from(fixture.nativeElement.querySelectorAll('button'))
-        .find((button: HTMLButtonElement) => button.textContent?.includes('Cancel')) ?? null;
+      Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button'))
+        .find(button => button.textContent?.includes('Cancel')) ?? null;
     expect(cancelButton).not.toBeNull();
     expect(cancelButton!.disabled).toBe(true);
 

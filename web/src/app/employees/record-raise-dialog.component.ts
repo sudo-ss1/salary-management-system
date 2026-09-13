@@ -56,7 +56,7 @@ export interface RecordRaiseData {
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
+      <button mat-button mat-dialog-close [disabled]="saving()">Cancel</button>
       <button mat-flat-button [disabled]="saving()" (click)="submit()">Record</button>
     </mat-dialog-actions>
   `,
