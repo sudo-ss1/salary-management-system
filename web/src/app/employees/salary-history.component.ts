@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, catchError, map, of, switchMap } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MoneyPipe } from '../core/money.pipe';
 import { ApiError } from '../core/problem-detail';
@@ -56,19 +58,40 @@ export class SalaryHistoryComponent {
   protected readonly state = signal<RequestState<SalaryHistoryItem[]>>(loading());
   protected readonly columns = ['period', 'salary', 'reason'];
 
+  /**
+   * EmployeeDetailComponent reuses this component's host across employees
+   * (its own id-effect is proof the instance survives a route-id change), so
+   * a plain .subscribe() per id could let a slow response for an abandoned
+   * employee land after a newer one and repaint history under the wrong
+   * name. switchMap cancels the superseded request instead of merely
+   * ignoring its response - the same race EmployeeDetailStore.load() closes.
+   * A Subject (rather than deriving straight from the employeeId signal) is
+   * used because it emits on every next() regardless of value equality, so
+   * the retry button reloading the same id still issues a fresh request.
+   */
+  private readonly loadRequests = new Subject<number>();
+
   constructor() {
+    this.loadRequests
+      .pipe(
+        switchMap(id =>
+          this.api.salaryHistory(id).pipe(
+            map(rows => ready<SalaryHistoryItem[]>(rows)),
+            catchError((error: ApiError) => of(failed<SalaryHistoryItem[]>(error))),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe(state => this.state.set(state));
+
     effect(() => {
-      this.employeeId();
-      this.load();
+      this.load(this.employeeId());
     });
   }
 
-  protected load(): void {
+  protected load(id: number = this.employeeId()): void {
     this.state.set(loading());
-    this.api.salaryHistory(this.employeeId()).subscribe({
-      next: rows => this.state.set(ready(rows)),
-      error: (error: ApiError) => this.state.set(failed(error)),
-    });
+    this.loadRequests.next(id);
   }
 
   protected rows(): SalaryHistoryItem[] {
