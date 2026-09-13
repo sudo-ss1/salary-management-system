@@ -76,6 +76,9 @@ public class ApiExceptionHandler {
             "employee_number_unique", "That employee number is already in use",
             "salary_one_per_employee", "That employee already has a current salary");
 
+    private static final String GENERIC_CONFLICT =
+            "This change conflicts with data that already exists";
+
     /**
      * Uniqueness is enforced by a partial unique index, never by a
      * SELECT-then-INSERT pre-check, which loses under concurrency - ADR-0007.
@@ -94,14 +97,23 @@ public class ApiExceptionHandler {
         if (cause != null && cause.contains("violates check constraint")) {
             ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
             problem.setTitle("Rule violation");
-            problem.setDetail("Rejected by the database rule " + constraint);
+            problem.setDetail(constraint == null
+                    ? "Rejected by a database rule"
+                    : "Rejected by the database rule " + constraint);
             return problem;
         }
 
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problem.setTitle("Conflict");
-        problem.setDetail(UNIQUE_CONFLICTS.getOrDefault(constraint,
-                "This change conflicts with data that already exists"));
+        // Guarded rather than getOrDefault(constraint, ...): UNIQUE_CONFLICTS is a
+        // Map.of(...), and those throw NullPointerException on a null key instead
+        // of returning the default. A DataIntegrityViolationException whose cause
+        // is not a Hibernate ConstraintViolationException - a numeric overflow,
+        // say - has no constraint name, and crashing here would turn a graceful
+        // 409 into a 500.
+        problem.setDetail(constraint == null
+                ? GENERIC_CONFLICT
+                : UNIQUE_CONFLICTS.getOrDefault(constraint, GENERIC_CONFLICT));
         return problem;
     }
 
