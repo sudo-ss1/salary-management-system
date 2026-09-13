@@ -44,14 +44,54 @@ describe('apiErrorInterceptor', () => {
     http.put('/api/employees/1', {}).subscribe({
       error: (error: ApiError) => {
         expect(error.isConflict).toBe(true);
+        expect(error.isVersionConflict).toBe(true);
         expect(error.currentVersion).toBe(3);
         done();
       },
     });
 
     mock.expectOne('/api/employees/1').flush(
-      { title: 'Conflict', detail: 'This record changed since you loaded it.', currentVersion: 3 },
+      {
+        title: 'Conflict',
+        detail: 'This record changed since you loaded it.',
+        currentVersion: 3,
+        conflictKind: 'STALE_VERSION',
+      },
       { status: 409, statusText: 'Conflict' },
+    );
+  });
+
+  it('marks a uniqueness-violation response as a conflict but not a version conflict', done => {
+    http.post('/api/employees', {}).subscribe({
+      error: (error: ApiError) => {
+        expect(error.isConflict).toBe(true);
+        expect(error.isVersionConflict).toBe(false);
+        expect(error.detail).toBe('That email address is already in use');
+        done();
+      },
+    });
+
+    mock.expectOne('/api/employees').flush(
+      {
+        title: 'Conflict',
+        detail: 'That email address is already in use',
+        conflictKind: 'UNIQUE_CONSTRAINT',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+  });
+
+  it('does not mark a plain bad request as a conflict', done => {
+    http.get('/api/employees').subscribe({
+      error: (error: ApiError) => {
+        expect(error.isConflict).toBe(false);
+        done();
+      },
+    });
+
+    mock.expectOne('/api/employees').flush(
+      { title: 'Validation failed', detail: 'One or more fields are invalid' },
+      { status: 400, statusText: 'Bad Request' },
     );
   });
 

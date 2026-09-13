@@ -8,8 +8,7 @@ describe('formatMoney', () => {
 
   it('formats a rupee amount in rupees, not in dollars', () => {
     const formatted = formatMoney({ amount: '3712500.00', currency: 'INR' }, 'en-IN');
-    expect(formatted).toContain('₹');
-    expect(formatted).not.toContain('$');
+    expect(formatted).toBe('₹37,12,500.00');
   });
 
   it('keeps full precision for an amount beyond the safe integer range', () => {
