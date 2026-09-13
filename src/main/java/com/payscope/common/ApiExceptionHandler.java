@@ -6,6 +6,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -122,6 +123,12 @@ public class ApiExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problem.setTitle("Conflict");
         problem.setDetail("This record changed since you loaded it. Reload and try again.");
+        if (e instanceof ObjectOptimisticLockingFailureException lock && lock.getIdentifier() != null) {
+            problem.setProperty("conflictedId", lock.getIdentifier());
+        }
+        if (e instanceof StaleVersionException stale) {
+            problem.setProperty("currentVersion", stale.currentVersion());
+        }
         return problem;
     }
 

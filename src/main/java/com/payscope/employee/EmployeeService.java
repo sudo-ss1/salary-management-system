@@ -4,12 +4,14 @@ import com.payscope.common.DomainException;
 import com.payscope.common.Money;
 import com.payscope.common.MoneyDto;
 import com.payscope.common.NotFoundException;
+import com.payscope.common.StaleVersionException;
 import com.payscope.currency.ConversionResult;
 import com.payscope.currency.Country;
 import com.payscope.currency.CountryRepository;
 import com.payscope.currency.CurrencyConverter;
 import com.payscope.employee.dto.CreateEmployeeRequest;
 import com.payscope.employee.dto.EmployeeDetailResponse;
+import com.payscope.employee.dto.UpdateEmployeeRequest;
 import com.payscope.salary.CompaRatio;
 import com.payscope.salary.PayBand;
 import com.payscope.salary.PayBandRepository;
@@ -103,5 +105,22 @@ public class EmployeeService {
                 band == null ? null : MoneyDto.from(band.mid()),
                 band == null ? null : MoneyDto.from(band.max()),
                 employee.version(), salary.version());
+    }
+
+    @Transactional
+    public EmployeeDetailResponse update(Long id, UpdateEmployeeRequest request) {
+        Employee employee = employees.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("No employee with id " + id));
+
+        if (!employee.version().equals(request.employeeVersion())) {
+            throw new StaleVersionException(Employee.class, id, employee.version());
+        }
+
+        employee.rename(request.fullName());
+        employee.changeEmail(request.email());
+        employee.reassign(request.department(), request.role(), request.level(), request.employmentType());
+        employees.saveAndFlush(employee);
+
+        return detail(id);
     }
 }

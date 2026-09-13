@@ -30,7 +30,6 @@ class EmployeeOptimisticLockTest {
 
         Employee writerOne = employees.findById(id).orElseThrow();
         Employee writerTwo = employees.findById(id).orElseThrow();
-        employees.getClass();
 
         writerOne.rename("Renamed By One");
         employees.saveAndFlush(writerOne);
