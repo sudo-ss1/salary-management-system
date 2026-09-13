@@ -61,6 +61,26 @@ export interface EmployeeQuery {
   readonly direction: SortDirection;
 }
 
+/**
+ * Creating an employee always creates their first salary - there is no
+ * meaningful state in which an employee exists with no pay (see
+ * CreateEmployeeRequest on the server), so the initial salary travels with
+ * the rest of the record rather than as a separate later step.
+ */
+export interface CreateEmployeeBody {
+  readonly employeeNumber: string;
+  readonly fullName: string;
+  readonly email: string;
+  readonly department: string;
+  readonly countryCode: string;
+  readonly role: string;
+  readonly level: string;
+  readonly employmentType: string;
+  readonly hireDate: string;
+  readonly salary: Money;
+  readonly salaryEffectiveFrom: string;
+}
+
 export interface UpdateEmployeeBody {
   readonly fullName: string;
   readonly email: string;
