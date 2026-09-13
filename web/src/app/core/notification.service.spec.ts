@@ -39,12 +39,43 @@ describe('NotificationService', () => {
     );
   });
 
-  it('does not toast an error carrying field errors, since the form shows those', () => {
+  it('does not toast a field error the caller declares a control renders', () => {
     service.notifyError(
       apiError({ fieldErrors: { email: 'must be a well-formed email address' } }),
+      new Set(['email']),
     );
 
     expect(snackBar.open).not.toHaveBeenCalled();
+  });
+
+  it('toasts a field error nothing has claimed, so it is never lost silently', () => {
+    service.notifyError(
+      apiError({ fieldErrors: { fullName: 'must not be blank' } }),
+      new Set(['email']), // the caller renders email, but not fullName
+    );
+
+    expect(snackBar.open).toHaveBeenCalledWith('must not be blank', 'Dismiss', { duration: 6000 });
+  });
+
+  it('toasts a field error when the caller declares no rendered fields at all', () => {
+    service.notifyError(apiError({ fieldErrors: { email: 'must be a well-formed email address' } }));
+
+    expect(snackBar.open).toHaveBeenCalledWith(
+      'must be a well-formed email address',
+      'Dismiss',
+      { duration: 6000 },
+    );
+  });
+
+  it('toasts only the unclaimed messages when some fields are rendered and others are not', () => {
+    service.notifyError(
+      apiError({
+        fieldErrors: { email: 'must be a well-formed email address', fullName: 'must not be blank' },
+      }),
+      new Set(['email']),
+    );
+
+    expect(snackBar.open).toHaveBeenCalledWith('must not be blank', 'Dismiss', { duration: 6000 });
   });
 
   it('does not toast a stale-version conflict, since a reload prompt covers it', () => {

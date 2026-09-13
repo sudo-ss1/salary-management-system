@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
+import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
 import { DEPARTMENTS, EMPLOYMENT_TYPES, LEVELS, ROLES, titleCase } from '../shared/reference';
 import { SalaryHistoryComponent } from './salary-history.component';
 import { RecordRaiseDialogComponent } from './record-raise-dialog.component';
@@ -45,12 +46,15 @@ import { EmployeeDetail } from './employee.models';
           <mat-card>
             <mat-form-field appearance="outline">
               <mat-label>Full name</mat-label>
-              <input matInput [(ngModel)]="form.fullName" />
+              <input matInput [(ngModel)]="form.fullName" [errorStateMatcher]="alwaysShowErrors" />
+              @if (store.fieldErrors()['fullName']; as message) {
+                <mat-error>{{ message }}</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Email</mat-label>
-              <input matInput [(ngModel)]="form.email" />
+              <input matInput [(ngModel)]="form.email" [errorStateMatcher]="alwaysShowErrors" />
               @if (store.fieldErrors()['email']; as message) {
                 <mat-error>{{ message }}</mat-error>
               }
@@ -150,6 +154,7 @@ export class EmployeeDetailComponent {
   protected readonly levels = LEVELS;
   protected readonly employmentTypes = EMPLOYMENT_TYPES;
   protected readonly label = titleCase;
+  protected readonly alwaysShowErrors = new AlwaysShowErrorStateMatcher();
 
   protected form = {
     fullName: '', email: '', department: '', role: '', level: '', employmentType: '',

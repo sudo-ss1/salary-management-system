@@ -7,6 +7,9 @@ import { RequestState, failed, loading, ready } from '../shared/request-state';
 import { EmployeeApiService } from './employee-api.service';
 import { EmployeeDetail, UpdateEmployeeBody } from './employee.models';
 
+/** Fields employee-detail.component.ts renders a <mat-error> for, next to the control itself. */
+const RENDERED_FIELDS = new Set(['fullName', 'email']);
+
 /**
  * Provided at component level, not root, so navigating between employees starts
  * clean rather than briefly showing the previous person's record.
@@ -129,6 +132,6 @@ export class EmployeeDetailStore {
     // NotificationService, not a "this record changed, reload" prompt that
     // would not even be true.
     this.conflict.set(error.isVersionConflict);
-    this.notifications.notifyError(error);
+    this.notifications.notifyError(error, RENDERED_FIELDS);
   }
 }

@@ -11,16 +11,31 @@ export class NotificationService {
   }
 
   /**
-   * Field-level errors are bound to form controls by the caller, so only the
-   * rest reach the snackbar. A stale-version conflict is never announced here
-   * either - it needs a reload prompt, not a transient toast. A uniqueness
-   * conflict (e.g. a duplicate email) has no reload prompt to show instead,
-   * so its message must reach the snackbar like any other error.
+   * Field-level errors are only ever safe to hide here if the caller can
+   * name a control that renders each one - so the caller must declare that
+   * set explicitly via `renderedFields` rather than this service assuming a
+   * form exists to catch them. Any field error whose name is not in that set
+   * is "unclaimed": it goes to the snackbar instead, so a server-side field
+   * nothing renders yet can never fail silently - it is merely reported
+   * twice on the day someone finally adds the control for it.
+   *
+   * A stale-version conflict is never announced here either - it needs a
+   * reload prompt, not a transient toast. A uniqueness conflict (e.g. a
+   * duplicate email) has no reload prompt to show instead, so its message
+   * must reach the snackbar like any other error.
    */
-  notifyError(error: ApiError): void {
-    if (Object.keys(error.fieldErrors).length > 0 || error.isVersionConflict) {
+  notifyError(error: ApiError, renderedFields: ReadonlySet<string> = new Set()): void {
+    if (error.isVersionConflict) {
       return;
     }
-    this.snackBar.open(error.detail, 'Dismiss', { duration: 6000 });
+    const fieldEntries = Object.entries(error.fieldErrors);
+    const unclaimed = fieldEntries.filter(([field]) => !renderedFields.has(field));
+    if (fieldEntries.length > 0 && unclaimed.length === 0) {
+      return; // every field error has a control rendering it - nothing left to say
+    }
+    const message = unclaimed.length > 0
+      ? unclaimed.map(([, fieldMessage]) => fieldMessage).join(' ')
+      : error.detail;
+    this.snackBar.open(message, 'Dismiss', { duration: 6000 });
   }
 }
