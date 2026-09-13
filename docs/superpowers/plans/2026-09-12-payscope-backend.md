@@ -4894,7 +4894,7 @@ Three properties are deliberate:
 - **Grouping by level alone mixes three currencies**, proving aggregation runs on `amount_base_usd`. The eleven SENIOR employees sorted by base give a p50 of exactly 106 920 — a nonsensical number if the query touched `amount_original`.
 - **N1 has no band**, so `unbandedCount` is a real figure and the outlier list is provably not silently dropping anyone.
 
-Derived totals: headcount **12**, total CTC **1 405 077.50** USD, mean **117 089.79**, unbanded **1**, outliers **3** (U1, U4, I3).
+Derived totals: headcount **12**, total CTC **1 405 077.50** USD, mean **117 089.79**, unbanded **1**, outliers **3** (U1, U4, I3). Compa-ratio buckets are **1 / 2 / 4 / 2 / 2**, which sum to the 11 banded employees.
 
 **Files:**
 - Create: `src/test/java/com/payscope/support/Fixtures.java`
@@ -5062,10 +5062,11 @@ class SummaryApiTest {
     @Test
     void buckets_every_banded_employee_by_compa_ratio() throws Exception {
         // 11 banded employees: 0.70 | 0.80 0.80 | 0.90 1.00 1.00 1.00 | 1.10 1.20 | 1.25 1.30
+        // The five counts must sum to 11. They are 1 + 2 + 4 + 2 + 2.
         mvc.perform(get("/api/analytics/summary"))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'LT_80')].headcount").value(1))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B80_90')].headcount").value(2))
-                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B90_110')].headcount").value(5))
+                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B90_110')].headcount").value(4))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B110_120')].headcount").value(2))
                 .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'GT_120')].headcount").value(2));
     }
