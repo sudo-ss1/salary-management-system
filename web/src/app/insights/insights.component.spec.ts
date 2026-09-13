@@ -69,4 +69,14 @@ describe('InsightsComponent', () => {
 
     expect(instance['selectedBucket']()).toBe('GT_120');
   }));
+
+  it('labels a group the same way the chart does, so the table row does not disagree with the bar above it', fakeAsync(() => {
+    const fixture = createAndFlush();
+    const instance = fixture.componentInstance;
+
+    // Previously this joined raw values ("BR · JUNIOR"), while the chart
+    // title-cased everything but the country ("BR · Junior") - two labels
+    // for the same group, one directly above the other.
+    expect(instance['groupLabel']({ key: { country: 'BR', level: 'JUNIOR' } })).toBe('BR · Junior');
+  }));
 });
