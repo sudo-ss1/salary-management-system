@@ -3272,14 +3272,21 @@ class UpdateEmployeeApiTest {
         return Long.parseLong(location.substring(location.lastIndexOf('/') + 1));
     }
 
-    private String updateBody(String fullName, String level, long version) {
+    /**
+     * The email must be a parameter, not a literal. These tests share one database
+     * with no per-test rollback, so a hardcoded address collides on
+     * employee_email_unique across tests - which made the stale-version test return
+     * 409 for a duplicate email rather than for a stale version, and pass even
+     * though it was testing nothing.
+     */
+    private String updateBody(String fullName, String email, String level, long version) {
         return """
                 {
-                  "fullName": "%s", "email": "updated@acme.test", "department": "PRODUCT",
+                  "fullName": "%s", "email": "%s", "department": "PRODUCT",
                   "role": "PRODUCT_MANAGER", "level": "%s", "employmentType": "FULL_TIME",
                   "employeeVersion": %d
                 }
-                """.formatted(fullName, level, version);
+                """.formatted(fullName, email, level, version);
     }
 
     @Test
@@ -3287,7 +3294,7 @@ class UpdateEmployeeApiTest {
         long id = create("E-5001", "u1@acme.test");
 
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                        .content(updateBody("Asha Menon-Rao", "STAFF", 0)))
+                        .content(updateBody("Asha Menon-Rao", "updated1@acme.test", "STAFF", 0)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Asha Menon-Rao"))
                 .andExpect(jsonPath("$.level").value("STAFF"))
@@ -3301,7 +3308,7 @@ class UpdateEmployeeApiTest {
         // PRODUCT_MANAGER / STAFF / IN mid = 125000 x 1.70 x 0.30 / 0.012 = 5312500 INR.
         // The salary is unchanged at 3712500, so 3712500 / 5312500 = 0.6988.
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                .content(updateBody("Asha Menon", "STAFF", 0)));
+                .content(updateBody("Asha Menon", "updated2@acme.test", "STAFF", 0)));
 
         mvc.perform(get("/api/employees/{id}", id))
                 .andExpect(jsonPath("$.compaRatio").value(0.6988));
@@ -3311,10 +3318,10 @@ class UpdateEmployeeApiTest {
     void rejects_a_stale_version_with_a_conflict() throws Exception {
         long id = create("E-5003", "u3@acme.test");
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                .content(updateBody("First Edit", "STAFF", 0)));
+                .content(updateBody("First Edit", "updated3@acme.test", "STAFF", 0)));
 
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                        .content(updateBody("Second Edit", "STAFF", 0)))
+                        .content(updateBody("Second Edit", "updated3@acme.test", "STAFF", 0)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Conflict"));
     }
@@ -3323,10 +3330,10 @@ class UpdateEmployeeApiTest {
     void reports_the_current_version_in_the_conflict_so_the_client_can_recover() throws Exception {
         long id = create("E-5004", "u4@acme.test");
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                .content(updateBody("First Edit", "STAFF", 0)));
+                .content(updateBody("First Edit", "updated3@acme.test", "STAFF", 0)));
 
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                        .content(updateBody("Second Edit", "STAFF", 0)))
+                        .content(updateBody("Second Edit", "updated3@acme.test", "STAFF", 0)))
                 .andExpect(jsonPath("$.currentVersion").value(1));
     }
 
@@ -3349,7 +3356,7 @@ class UpdateEmployeeApiTest {
     @Test
     void returns_not_found_when_updating_an_employee_that_does_not_exist() throws Exception {
         mvc.perform(put("/api/employees/{id}", 999_999_999L).contentType(APPLICATION_JSON)
-                        .content(updateBody("Ghost", "STAFF", 0)))
+                        .content(updateBody("Ghost", "ghost@acme.test", "STAFF", 0)))
                 .andExpect(status().isNotFound())
                 // Assert the problem body, not just the status: an unmapped or
                 // broken route also yields 404, so a status-only assertion would
