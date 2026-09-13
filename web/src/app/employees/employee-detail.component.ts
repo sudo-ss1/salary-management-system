@@ -35,6 +35,12 @@ import { EmployeeDetail } from './employee.models';
     @if (employee(); as person) {
       <h1>{{ person.fullName }}</h1>
 
+      <dl class="facts">
+        <div><dt>Employee number</dt><dd>{{ person.employeeNumber }}</dd></div>
+        <div><dt>Hire date</dt><dd>{{ person.hireDate }}</dd></div>
+        <div><dt>Status</dt><dd>{{ label(person.status) }}</dd></div>
+      </dl>
+
       @if (store.conflict()) {
         <div class="conflict" role="alert">
           <span>This record changed since you opened it. Reload to see the current values.</span>
@@ -136,6 +142,10 @@ import { EmployeeDetail } from './employee.models';
     }
   `,
   styles: [`
+    .facts { display: flex; gap: 1.5rem; margin: .5rem 0 0; }
+    .facts div { display: flex; gap: .35rem; }
+    .facts dt { opacity: .65; margin: 0; }
+    .facts dd { margin: 0; font-weight: 500; }
     .conflict { display: flex; align-items: center; gap: 1rem; padding: .75rem 1rem;
                 border: 1px solid var(--mat-sys-error, #b3261e); border-radius: 4px; margin: 1rem 0; }
     mat-card { padding: 1.5rem; margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; }
