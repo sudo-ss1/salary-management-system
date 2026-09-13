@@ -1,6 +1,7 @@
 package com.payscope.analytics;
 
 import com.payscope.analytics.dto.CompaRatioBucket;
+import com.payscope.analytics.dto.DistributionGroup;
 import com.payscope.analytics.dto.SummaryResponse;
 import com.payscope.common.MoneyDto;
 import jakarta.persistence.EntityManager;
@@ -10,7 +11,11 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * All aggregation is SQL. Nothing here loads rows into memory to compute a
@@ -80,6 +85,57 @@ public class AnalyticsRepository {
                         new CompaRatioBucket("B90_110", ((Number) t.get("b90_110")).longValue()),
                         new CompaRatioBucket("B110_120", ((Number) t.get("b110_120")).longValue()),
                         new CompaRatioBucket("GT_120", ((Number) t.get("gt120")).longValue())));
+    }
+
+    public List<DistributionGroup> distribution(AnalyticsFilter filter, List<GroupByDimension> groupBy) {
+        String selectedColumns = groupBy.stream()
+                .map(d -> d.column() + " as " + d.key())
+                .collect(Collectors.joining(",\n       "));
+        String groupClause = groupBy.isEmpty() ? ""
+                : "group by " + groupBy.stream().map(GroupByDimension::column).collect(Collectors.joining(", "))
+                  + "\norder by " + groupBy.stream().map(GroupByDimension::column).collect(Collectors.joining(", "));
+
+        // percentile_cont for every percentile, including the compa-ratio one, so
+        // a single payload never carries two percentile methods - ADR-0003.
+        // percentile_cont always returns double precision, and Postgres has no
+        // round(double precision, integer) overload, so every percentile is cast
+        // to numeric before rounding.
+        String sql = "select " + (selectedColumns.isEmpty() ? "" : selectedColumns + ",\n       ") + """
+                count(*) as headcount,
+                       round(cast(percentile_cont(0.25) within group (order by s.amount_base_usd) as numeric), 2) as p25,
+                       round(cast(percentile_cont(0.50) within group (order by s.amount_base_usd) as numeric), 2) as p50,
+                       round(cast(percentile_cont(0.75) within group (order by s.amount_base_usd) as numeric), 2) as p75,
+                       round(cast(percentile_cont(0.90) within group (order by s.amount_base_usd) as numeric), 2) as p90,
+                       round(avg(s.amount_base_usd), 2) as mean,
+                       round(cast(percentile_cont(0.50) within group (
+                               order by s.amount_original / b.band_mid) as numeric), 4) as median_compa_ratio
+                """ + FROM_AND_WHERE + groupClause;
+
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = bind(em.createNativeQuery(sql, Tuple.class), filter).getResultList();
+
+        List<DistributionGroup> groups = new ArrayList<>();
+        for (Tuple row : rows) {
+            Map<String, String> key = new LinkedHashMap<>();
+            for (GroupByDimension dimension : groupBy) {
+                Object value = row.get(dimension.key());
+                key.put(dimension.key(), value == null ? null : value.toString());
+            }
+            groups.add(new DistributionGroup(key,
+                    ((Number) row.get("headcount")).longValue(),
+                    usd(row.get("p25", BigDecimal.class)),
+                    usd(row.get("p50", BigDecimal.class)),
+                    usd(row.get("p75", BigDecimal.class)),
+                    usd(row.get("p90", BigDecimal.class)),
+                    usd(row.get("mean", BigDecimal.class)),
+                    row.get("median_compa_ratio", BigDecimal.class)));
+        }
+        return groups;
+    }
+
+    private static MoneyDto usd(BigDecimal amount) {
+        return amount == null ? null : new MoneyDto(
+                amount.setScale(2, RoundingMode.HALF_UP).toPlainString(), "USD");
     }
 
     static Query bind(Query query, AnalyticsFilter f) {
