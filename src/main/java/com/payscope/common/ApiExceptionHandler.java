@@ -1,5 +1,6 @@
 package com.payscope.common;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -68,15 +70,38 @@ public class ApiExceptionHandler {
         return problem;
     }
 
+    /** Constraint name -> the message a client can actually act on. */
+    private static final Map<String, String> UNIQUE_CONFLICTS = Map.of(
+            "employee_email_unique", "That email address is already in use",
+            "employee_number_unique", "That employee number is already in use",
+            "salary_one_per_employee", "That employee already has a current salary");
+
     /**
      * Uniqueness is enforced by a partial unique index, never by a
      * SELECT-then-INSERT pre-check, which loses under concurrency - ADR-0007.
+     *
+     * A unique violation is a genuine conflict and maps to 409. A check
+     * violation is invalid data that the service layer should have rejected
+     * first, so it maps to 400 - reporting it as a conflict would tell the
+     * client to retry something that can never succeed.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail onConstraintViolation(DataIntegrityViolationException e) {
+        String constraint = e.getCause() instanceof ConstraintViolationException violation
+                ? violation.getConstraintName() : null;
+        String cause = e.getMostSpecificCause().getMessage();
+
+        if (cause != null && cause.contains("violates check constraint")) {
+            ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+            problem.setTitle("Rule violation");
+            problem.setDetail("Rejected by the database rule " + constraint);
+            return problem;
+        }
+
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problem.setTitle("Conflict");
-        problem.setDetail("That employee number or email address is already in use");
+        problem.setDetail(UNIQUE_CONFLICTS.getOrDefault(constraint,
+                "This change conflicts with data that already exists"));
         return problem;
     }
 
