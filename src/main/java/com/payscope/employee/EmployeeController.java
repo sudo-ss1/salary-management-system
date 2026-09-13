@@ -1,5 +1,6 @@
 package com.payscope.employee;
 
+import com.payscope.common.DomainException;
 import com.payscope.common.PagedResponse;
 import com.payscope.employee.dto.CreateEmployeeRequest;
 import com.payscope.employee.dto.EmployeeDetailResponse;
@@ -48,7 +49,23 @@ public class EmployeeController {
             @RequestParam(defaultValue = "asc") String direction) {
 
         return service.search(new EmployeeQuery(country, department, level, status, q, page, size,
-                EmployeeSort.parse(sort), !"desc".equalsIgnoreCase(direction)));
+                EmployeeSort.parse(sort), parseAscending(direction)));
+    }
+
+    /**
+     * Parsed the same way EmployeeSort.parse is: a closed set of two permitted
+     * values, case-insensitive, a 400 for anything else. Silently treating an
+     * unrecognised direction as ascending would tell a caller nothing when they
+     * sent "descending" or a typo and got the opposite of what they asked for.
+     */
+    private static boolean parseAscending(String direction) {
+        if ("asc".equalsIgnoreCase(direction)) {
+            return true;
+        }
+        if ("desc".equalsIgnoreCase(direction)) {
+            return false;
+        }
+        throw new DomainException("Cannot sort direction by '" + direction + "'. Permitted values: asc, desc");
     }
 
     @GetMapping("/{id}")

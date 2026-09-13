@@ -43,7 +43,7 @@ public enum GroupByDimension {
         if (values.size() > MAX_DIMENSIONS) {
             throw new DomainException("Group by at most two dimensions, was given " + values.size());
         }
-        return values.stream().map(GroupByDimension::parseOne).toList();
+        return values.stream().map(GroupByDimension::parseOne).distinct().toList();
     }
 
     private static GroupByDimension parseOne(String value) {
