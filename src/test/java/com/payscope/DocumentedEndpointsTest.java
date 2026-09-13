@@ -16,8 +16,10 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The README lists the API. This fails if an endpoint exists that the README
- * does not mention, so the documentation cannot silently drift.
+ * The README lists the API. This fails both if an endpoint exists that the
+ * README does not mention, and if the README documents a route (or method)
+ * that no longer exists - so the documentation cannot silently drift in
+ * either direction.
  */
 @IntegrationTest
 class DocumentedEndpointsTest {

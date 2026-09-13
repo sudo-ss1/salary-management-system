@@ -9,6 +9,7 @@ import com.payscope.employee.Role;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.IntStream;
 
 /**
  * Deterministic given a seed. The distribution is shaped rather than uniform: a
@@ -58,7 +59,7 @@ public class EmployeeGenerator {
     }
 
     public List<GeneratedEmployee> generate(int count) {
-        return java.util.stream.IntStream.range(0, count).mapToObj(this::one).toList();
+        return IntStream.range(0, count).mapToObj(this::one).toList();
     }
 
     private GeneratedEmployee one(int index) {

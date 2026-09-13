@@ -81,8 +81,8 @@ public class AnalyticsRepository {
 
         return new SummaryResponse(
                 ((Number) t.get("headcount")).longValue(),
-                new MoneyDto(t.get("total_ctc", BigDecimal.class).setScale(2, RoundingMode.HALF_UP).toPlainString(), "USD"),
-                new MoneyDto(t.get("mean_base", BigDecimal.class).setScale(2, RoundingMode.HALF_UP).toPlainString(), "USD"),
+                usd(t.get("total_ctc", BigDecimal.class)),
+                usd(t.get("mean_base", BigDecimal.class)),
                 ((Number) t.get("unbanded")).longValue(),
                 List.of(
                         new CompaRatioBucket("LT_80", ((Number) t.get("lt80")).longValue()),
@@ -153,9 +153,12 @@ public class AnalyticsRepository {
     }
 
     /**
-     * An inner join to pay_band, not a left join: an employee with no band has a
-     * null compa-ratio and is never an outlier. The boundaries are inclusive, so
-     * exactly 0.80 and exactly 1.20 are inside the window.
+     * FROM_AND_WHERE already left joins pay_band, so an unbanded employee has
+     * band_mid = null; the explicit "b.band_mid is not null" here is redundant
+     * with SQL's three-valued logic (any comparison against null is unknown, not
+     * true) but stated anyway so an unbanded employee is never an outlier without
+     * relying on a reader to know that. The boundaries are inclusive, so exactly
+     * 0.80 and exactly 1.20 are inside the window.
      */
     private static final String OUTLIER_PREDICATE = """
               and b.band_mid is not null

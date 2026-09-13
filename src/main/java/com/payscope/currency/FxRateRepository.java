@@ -1,6 +1,5 @@
 package com.payscope.currency;
 
-import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;

@@ -76,6 +76,13 @@ public class EmployeeService {
                     + " is in the future");
         }
 
+        // saveAndFlush, not save: this is load-bearing, not an optimisation to
+        // undo. It forces the insert - and any unique-index violation on
+        // employee_number/email - to happen here, inside this method, where it
+        // surfaces as a DataIntegrityViolationException ApiExceptionHandler maps
+        // to 409. Left to Hibernate's normal flush-at-commit timing, the same
+        // violation would surface at transaction commit instead, past the point
+        // this method's caller can still turn it into a clean response.
         Employee employee = employees.saveAndFlush(Employee.create(
                 request.employeeNumber(), request.fullName(), request.email(), request.department(),
                 request.countryCode(), request.role(), request.level(), request.employmentType(),
@@ -116,6 +123,14 @@ public class EmployeeService {
         Employee employee = employees.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("No employee with id " + id));
 
+        // Looks redundant next to @Version, but is not: this method reloads the
+        // entity fresh from the database inside its own transaction, so it always
+        // holds the current row's version. Hibernate's optimistic-lock check
+        // compares against whatever version this managed entity already carries,
+        // which is this fresh read - it can never observe the version the client
+        // actually requested with, so it can never by itself catch a stale
+        // request. This explicit comparison against request.employeeVersion() is
+        // what does that.
         if (!employee.version().equals(request.employeeVersion())) {
             throw new StaleVersionException(Employee.class, id, employee.version());
         }

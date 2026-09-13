@@ -104,10 +104,6 @@ public class Employee {
         this.deletedAt = at;
     }
 
-    public boolean isDeleted() {
-        return deletedAt != null;
-    }
-
     public Long id() { return id; }
     public String employeeNumber() { return employeeNumber; }
     public String fullName() { return fullName; }
