@@ -12,3 +12,16 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/payscope?reWriteBatchedInserts=true
+      SPRING_DATASOURCE_USERNAME: payscope
+      SPRING_DATASOURCE_PASSWORD: payscope
+    ports:
+      - "8080:8080"
