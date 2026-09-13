@@ -31,6 +31,9 @@ Every task's requirements implicitly include this section.
 - **Commit locally. Never push.** No remotes, ever.
 - **No AI attribution in commit messages.** No `Co-authored-by`, no generation trailers, no emoji.
 - **Schema changes are new Flyway migrations.** Never edit an applied one.
+- **Every optional filter in a native query is cast: `cast(:p as text) is null or col = cast(:p as text)`.**
+  PostgreSQL cannot infer a type for an untyped null bind and fails the statement.
+  Cast - never concatenate - so the filters stay bind parameters.
 - **Exchange rates are seeded at a historical baseline as well as the current date.**
   `V1` seeds each currency at 2026-01-01; `V5` seeds the same six currencies at
   2000-01-01. Salaries are routinely effective from a past hire date, and a converter
@@ -4220,13 +4223,18 @@ public class EmployeeListRepository {
                                 and b.job_level = e.job_level
                                 and b.country_code = e.country_code
             where e.deleted_at is null
-              and (:country    is null or e.country_code   = :country)
-              and (:department is null or e.department     = :department)
-              and (:level      is null or e.job_level      = :level)
-              and (:status     is null or e.status         = :status)
-              and (:q is null or e.full_name ilike :like
-                              or e.email ilike :like
-                              or e.employee_number ilike :like)
+              -- Each optional filter is cast explicitly. PostgreSQL cannot infer a
+              -- type for an untyped null bind and fails the whole statement with
+              -- "could not determine data type of parameter"; the cast supplies it.
+              -- Casting rather than concatenating keeps these as bind parameters,
+              -- which is what stops the filters being an injection vector.
+              and (cast(:country    as text) is null or e.country_code   = cast(:country    as text))
+              and (cast(:department as text) is null or e.department     = cast(:department as text))
+              and (cast(:level      as text) is null or e.job_level      = cast(:level      as text))
+              and (cast(:status     as text) is null or e.status         = cast(:status     as text))
+              and (cast(:q as text) is null or e.full_name       ilike cast(:like as text)
+                                            or e.email           ilike cast(:like as text)
+                                            or e.employee_number ilike cast(:like as text))
             """;
 
     private final EntityManager em;
@@ -5175,11 +5183,13 @@ public class AnalyticsRepository {
                                 and b.job_level = e.job_level
                                 and b.country_code = e.country_code
             where e.deleted_at is null
-              and (:country    is null or e.country_code = :country)
-              and (:department is null or e.department   = :department)
-              and (:role       is null or e.job_role     = :role)
-              and (:level      is null or e.job_level    = :level)
-              and (:status     is null or e.status       = :status)
+              -- Cast every optional filter: PostgreSQL cannot infer a type for an
+              -- untyped null bind. See the Task 12 ruling in the SDD ledger.
+              and (cast(:country    as text) is null or e.country_code = cast(:country    as text))
+              and (cast(:department as text) is null or e.department   = cast(:department as text))
+              and (cast(:role       as text) is null or e.job_role     = cast(:role       as text))
+              and (cast(:level      as text) is null or e.job_level    = cast(:level      as text))
+              and (cast(:status     as text) is null or e.status       = cast(:status     as text))
             """;
 
     private final EntityManager em;
