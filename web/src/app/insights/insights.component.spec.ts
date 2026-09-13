@@ -53,20 +53,20 @@ describe('InsightsComponent', () => {
     const fixture = createAndFlush();
     const instance = fixture.componentInstance;
 
-    instance.onBucketSelected('LT_80');
-    expect(instance.selectedBucket()).toBe('LT_80');
+    instance['onBucketSelected']('LT_80');
+    expect(instance['selectedBucket']()).toBe('LT_80');
 
-    instance.onBucketSelected('LT_80');
-    expect(instance.selectedBucket()).toBeNull();
+    instance['onBucketSelected']('LT_80');
+    expect(instance['selectedBucket']()).toBeNull();
   }));
 
   it('replaces the selection when a different bar is selected, rather than toggling it off', fakeAsync(() => {
     const fixture = createAndFlush();
     const instance = fixture.componentInstance;
 
-    instance.onBucketSelected('LT_80');
-    instance.onBucketSelected('GT_120');
+    instance['onBucketSelected']('LT_80');
+    instance['onBucketSelected']('GT_120');
 
-    expect(instance.selectedBucket()).toBe('GT_120');
+    expect(instance['selectedBucket']()).toBe('GT_120');
   }));
 });

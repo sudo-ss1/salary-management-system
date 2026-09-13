@@ -130,6 +130,8 @@ export class InsightsComponent {
   }
 
   protected onBucketSelected(bucket: CompaRatioBucketKey): void {
-    this.selectedBucket.set(bucket);
+    // Selecting the already-selected bar again is the only way back to the
+    // combined list - otherwise it stays a one-way door once any bar is clicked.
+    this.selectedBucket.update(current => (current === bucket ? null : bucket));
   }
 }
