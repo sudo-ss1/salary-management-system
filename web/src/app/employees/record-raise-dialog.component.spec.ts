@@ -109,6 +109,24 @@ describe('RecordRaiseDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('must take effect after');
   });
 
+  it('disables cancel while the raise is in flight, so it cannot be used to dodge a save', () => {
+    const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+                                       changeReason: '' };
+
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+
+    const cancelButton: HTMLButtonElement | null =
+      Array.from(fixture.nativeElement.querySelectorAll('button'))
+        .find((button: HTMLButtonElement) => button.textContent?.includes('Cancel')) ?? null;
+    expect(cancelButton).not.toBeNull();
+    expect(cancelButton!.disabled).toBe(true);
+
+    mock.expectOne('/api/employees/7/salary').flush({});
+  });
+
   it('shows the server field errors next to the offending inputs, mapping the nested salary.amount key', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
