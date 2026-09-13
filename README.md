@@ -11,6 +11,10 @@ design.
 The API comes up on http://localhost:8080 with 10,000 seeded employees. First
 build takes a few minutes; subsequent starts are seconds.
 
+Seeding runs just after the web server starts accepting requests, so a request
+issued in the first second or so can return `"headcount": 0`. That is the seed
+still running, not a failure - retry and it will report 10,000.
+
 To run against a local database instead:
 
     docker compose up db
