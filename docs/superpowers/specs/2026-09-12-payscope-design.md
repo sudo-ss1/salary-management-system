@@ -166,7 +166,12 @@ beat one annotation that silently misses the queries that matter.
 
 ## 6. Pagination
 
-`GET /api/employees?page=0&size=25&sort=fullName,asc` plus filters.
+`GET /api/employees?page=0&size=25&sort=FULL_NAME&direction=asc` plus filters.
+
+*(Amended after implementation: this section originally documented Spring's
+`sort=fullName,asc` form. The built API takes the sort key and the direction as
+separate parameters, with the key drawn from a closed enum. The README and the
+frontend plan both describe the implemented shape; this text was the stale one.)*
 
 - **`size` outside 1–100 → 400**, not a silent clamp. A client asking for 500
   has a bug; quietly returning 100 hides it.
@@ -489,13 +494,20 @@ run, with no scheduler dependence.
 | 0005 | Soft delete distinct from employment status; every salary aggregate joins `employee` |
 | 0006 | ngx-charts, fed only precomputed aggregates — no client-side statistics |
 | 0007 | Optimistic locking as concurrency *and* idempotency mechanism; no `Idempotency-Key` table |
+| 0008 | Accepting a double-precision step inside `percentile_cont` — written during implementation |
 
 All seven were checked pairwise for contradiction before being written. Four
 conflicts were found and resolved into the design above: `DELETE` versioning vs
 idempotency (§7), ambiguous `version` naming (§7), the band reference line on a
 USD chart (§10), and ngx-charts' client-side quartile computation (§10).
 
-**Zoneless Angular is not an ADR.** It could not be verified against ngx-charts
+**Zoneless Angular is not an ADR, and no longer holds a reserved number.** This
+section originally earmarked ADR-0008 for it. Implementation reached a decision
+first — the `percentile_cont` precision trade-off — and took that number. Reserving
+a number for a decision not yet made was the mistake; zoneless becomes ADR-0009 if
+the spike supports it.
+
+ It could not be verified against ngx-charts
 from available documentation, and an ADR resting on an unverified claim is how
 the contradictions above get created. It becomes a short spike during
 scaffolding and earns ADR-0008 only if evidence supports it. Nothing in this

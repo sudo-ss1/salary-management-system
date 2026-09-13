@@ -3339,11 +3339,14 @@ class UpdateEmployeeApiTest {
     @Test
     void reports_the_current_version_in_the_conflict_so_the_client_can_recover() throws Exception {
         long id = create("E-5004", "u4@acme.test");
+        // A distinct address per employee. Reusing another test's literal collides
+        // on employee_email_unique and turns this 409 into a duplicate-email 409
+        // with no currentVersion property - the test would fail for the wrong reason.
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                .content(updateBody("First Edit", "updated3@acme.test", "STAFF", 0)));
+                .content(updateBody("First Edit", "updated4@acme.test", "STAFF", 0)));
 
         mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
-                        .content(updateBody("Second Edit", "updated3@acme.test", "STAFF", 0)))
+                        .content(updateBody("Second Edit", "updated4@acme.test", "STAFF", 0)))
                 .andExpect(jsonPath("$.currentVersion").value(1));
     }
 
@@ -5903,9 +5906,13 @@ import com.payscope.common.PagedResponse;
 import com.payscope.salary.CompaRatio;
 
     /**
-     * An inner join to pay_band, not a left join: an employee with no band has a
-     * null compa-ratio and is never an outlier. The boundaries are inclusive, so
-     * exactly 0.80 and exactly 1.20 are inside the window.
+     * Unbanded employees are excluded by `b.band_mid is not null`, which makes the
+     * shared left join behave as an inner one here. The predicate is belt and
+     * braces: dividing by a null band_mid yields null, and null < :low is unknown,
+     * so such a row would fall out of the WHERE clause regardless.
+     *
+     * The boundaries are inclusive - exactly 0.80 and exactly 1.20 are inside the
+     * window - which is why the comparisons are strict.
      */
     private static final String OUTLIER_PREDICATE = """
               and b.band_mid is not null
