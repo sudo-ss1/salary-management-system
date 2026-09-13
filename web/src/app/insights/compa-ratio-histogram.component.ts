@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { BarChartModule } from '@swimlane/ngx-charts';
+import { BarChartModule, Color, ScaleType } from '@swimlane/ngx-charts';
 import { CompaRatioBucket, CompaRatioBucketKey } from './analytics.models';
 import { ChartPoint } from './median-pay-chart.component';
 
@@ -42,10 +42,10 @@ export class CompaRatioHistogramComponent {
   readonly outOfBandColour = '#b3261e';
   readonly inBandColour = '#3f51b5';
 
-  readonly colourScheme = {
+  readonly colourScheme: Color = {
     name: 'compa-ratio',
     selectable: false,
-    group: 'Ordinal',
+    group: ScaleType.Ordinal,
     domain: BANDS.map(band => (band.problem ? this.outOfBandColour : this.inBandColour)),
   };
 
