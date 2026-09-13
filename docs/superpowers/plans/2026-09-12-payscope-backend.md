@@ -6021,7 +6021,7 @@ percent boundaries are inclusive."
 Implements spec §11. Three properties matter equally: fast, reproducible, and shaped like a real organization.
 
 **Files:**
-- Create: `src/main/java/com/payscope/seed/SeedProperties.java`, `EmployeeGenerator.java`, `SeedRunner.java`
+- Create: `src/main/java/com/payscope/seed/SeedProperties.java`, `EmployeeGenerator.java`, `Seeder.java`, `SeedRunner.java`
 - Modify: `src/main/java/com/payscope/PayscopeApplication.java` (enable configuration properties)
 - Test: `src/test/java/com/payscope/seed/SeedRunnerTest.java`
 
@@ -6029,7 +6029,8 @@ Implements spec §11. Three properties matter equally: fast, reproducible, and s
 - Produces:
   - `SeedProperties` bound to `payscope.seed`: `enabled` (default `false`), `employeeCount` (default `10000`), `randomSeed` (default `20260912`).
   - `EmployeeGenerator.generate(int count)` → `List<GeneratedEmployee>`, deterministic for a given seed.
-  - `SeedRunner.seed()` → `int` (rows written; `0` when already seeded).
+  - `Seeder.seed()` → `int` (rows written; `0` when already seeded). **`@Transactional` lives
+    here, on its own bean.** `SeedRunner` implements `ApplicationRunner` and delegates to it.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -6057,7 +6058,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 class SeedRunnerTest {
 
-    @Autowired SeedRunner runner;
+    @Autowired Seeder seeder;
     @Autowired JdbcTemplate jdbc;
     @Autowired DatabaseCleaner cleaner;
 
@@ -6068,7 +6069,7 @@ class SeedRunnerTest {
 
     @Test
     void writes_one_employee_and_one_salary_per_requested_row() {
-        runner.seed();
+        seeder.seed();
 
         assertThat(jdbc.queryForObject("select count(*) from employee", Integer.class)).isEqualTo(500);
         assertThat(jdbc.queryForObject("select count(*) from salary", Integer.class)).isEqualTo(500);
@@ -6076,7 +6077,7 @@ class SeedRunnerTest {
 
     @Test
     void produces_the_same_population_on_every_run_for_a_given_seed() {
-        runner.seed();
+        seeder.seed();
         String firstName = jdbc.queryForObject(
                 "select full_name from employee order by id limit 1", String.class);
         BigDecimal firstSalary = jdbc.queryForObject(
@@ -6084,7 +6085,7 @@ class SeedRunnerTest {
                         + " order by e.id limit 1", BigDecimal.class);
 
         cleaner.clean();
-        runner.seed();
+        seeder.seed();
 
         assertThat(jdbc.queryForObject("select full_name from employee order by id limit 1", String.class))
                 .isEqualTo(firstName);
@@ -6095,9 +6096,9 @@ class SeedRunnerTest {
 
     @Test
     void does_nothing_on_a_second_run_rather_than_doubling_the_population() {
-        runner.seed();
+        seeder.seed();
 
-        int written = runner.seed();
+        int written = seeder.seed();
 
         assertThat(written).isZero();
         assertThat(jdbc.queryForObject("select count(*) from employee", Integer.class)).isEqualTo(500);
@@ -6105,7 +6106,7 @@ class SeedRunnerTest {
 
     @Test
     void gives_every_employee_a_salary_in_their_own_countrys_currency() {
-        runner.seed();
+        seeder.seed();
 
         Integer mismatched = jdbc.queryForObject("""
                 select count(*) from employee e
@@ -6120,7 +6121,7 @@ class SeedRunnerTest {
     @Test
     void places_a_small_deliberate_minority_outside_the_band() {
         // An outlier detector with no outliers in it demos as broken.
-        runner.seed();
+        seeder.seed();
 
         Integer outliers = jdbc.queryForObject("""
                 select count(*) from employee e
@@ -6136,7 +6137,7 @@ class SeedRunnerTest {
 
     @Test
     void produces_a_level_pyramid_with_more_juniors_than_principals() {
-        runner.seed();
+        seeder.seed();
 
         Integer juniors = jdbc.queryForObject(
                 "select count(*) from employee where job_level = 'JUNIOR'", Integer.class);
@@ -6148,7 +6149,7 @@ class SeedRunnerTest {
 
     @Test
     void gives_some_employees_a_salary_history_so_timelines_are_not_empty() {
-        runner.seed();
+        seeder.seed();
 
         Integer historyRows = jdbc.queryForObject("select count(*) from salary_history", Integer.class);
 
@@ -6157,7 +6158,7 @@ class SeedRunnerTest {
 
     @Test
     void spreads_employees_across_every_country() {
-        runner.seed();
+        seeder.seed();
 
         Integer countries = jdbc.queryForObject(
                 "select count(distinct country_code) from employee", Integer.class);
@@ -6348,10 +6349,57 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Starts the seed on boot. Deliberately separate from {@link Seeder}: calling a
+ * @Transactional method from another method of the same bean is self-invocation,
+ * which bypasses the Spring proxy. The transaction would never begin, and
+ * pg_advisory_xact_lock - which releases on commit - would never hold. Tests
+ * would not catch it, because they call Seeder.seed() from outside, through the
+ * proxy, where the annotation does apply.
+ */
 @Component
 public class SeedRunner implements ApplicationRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(SeedRunner.class);
+    private final Seeder seeder;
+    private final SeedProperties properties;
+
+    public SeedRunner(Seeder seeder, SeedProperties properties) {
+        this.seeder = seeder;
+        this.properties = properties;
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        if (properties.isEnabled()) {
+            seeder.seed();
+        }
+    }
+}
+
+`src/main/java/com/payscope/seed/Seeder.java`
+```java
+package com.payscope.seed;
+
+import com.payscope.seed.EmployeeGenerator.GeneratedEmployee;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Component
+public class Seeder {
+
+    private static final Logger log = LoggerFactory.getLogger(Seeder.class);
     private static final long ADVISORY_LOCK_KEY = 8_675_309L;
     private static final LocalDate RATE_DATE = LocalDate.of(2026, 1, 1);
     private static final int BATCH_SIZE = 1000;
@@ -6359,16 +6407,9 @@ public class SeedRunner implements ApplicationRunner {
     private final JdbcTemplate jdbc;
     private final SeedProperties properties;
 
-    public SeedRunner(JdbcTemplate jdbc, SeedProperties properties) {
+    public Seeder(JdbcTemplate jdbc, SeedProperties properties) {
         this.jdbc = jdbc;
         this.properties = properties;
-    }
-
-    @Override
-    public void run(ApplicationArguments args) {
-        if (properties.isEnabled()) {
-            seed();
-        }
     }
 
     /**
