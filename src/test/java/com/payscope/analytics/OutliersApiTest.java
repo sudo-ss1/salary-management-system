@@ -115,4 +115,36 @@ class OutliersApiTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail", containsString("100")));
     }
+
+    @Test
+    void returns_only_the_underpaid_when_asked_for_the_low_band() throws Exception {
+        // From the fixture, only U1 sits below 0.80.
+        mvc.perform(get("/api/analytics/outliers").param("band", "LT_80"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].employeeNumber").value("F-U1"));
+    }
+
+    @Test
+    void returns_only_the_overpaid_when_asked_for_the_high_band() throws Exception {
+        mvc.perform(get("/api/analytics/outliers").param("band", "GT_120"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].employeeNumber").value("F-I3"))
+                .andExpect(jsonPath("$.content[1].employeeNumber").value("F-U4"));
+    }
+
+    @Test
+    void returns_both_directions_when_no_band_is_named() throws Exception {
+        mvc.perform(get("/api/analytics/outliers"))
+                .andExpect(jsonPath("$.totalElements").value(3));
+    }
+
+    @Test
+    void rejects_a_band_that_is_not_an_outlier_band() throws Exception {
+        // 90-110% employees are within band by definition and are not outliers.
+        mvc.perform(get("/api/analytics/outliers").param("band", "B90_110"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("LT_80")));
+    }
 }
