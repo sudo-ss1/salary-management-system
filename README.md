@@ -45,6 +45,29 @@ doesn't publish one by default (see Troubleshooting):
     docker compose run --rm -p 5432:5432 db
     ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
+## How this was built
+
+Design preceded code, and the reasoning is committed alongside it.
+
+| Document | What it is |
+|---|---|
+| [`requirements.md`](requirements.md) | Scope, persona, and what was deliberately left out |
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | The design, written and reviewed before implementation |
+| [`docs/architecture.md`](docs/architecture.md) | Diagrams: containers, data model, the write path, the analytical path, client state |
+| [`docs/adr/`](docs/adr/) | Nine decision records, one decision each, with consequences |
+| [`docs/performance.md`](docs/performance.md) | N+1 prevention, SQL aggregation, pagination, write throughput, bundle size |
+| [`docs/ai-process.md`](docs/ai-process.md) | How AI tools were used, what the reviews caught, and what the method missed |
+| [`docs/superpowers/plans/`](docs/superpowers/plans/) | The implementation plans, task by task |
+| [`docs/superpowers/2026-09-13-frontend-followups.md`](docs/superpowers/2026-09-13-frontend-followups.md) | Everything knowingly not done, with reasoning (backend counterpart alongside) |
+
+Three ADRs were written *during* implementation rather than before it, because
+implementation found something the design had not anticipated. Those are the
+interesting ones: [0008](docs/adr/0008-accepting-a-double-precision-step-inside-percentile-cont.md)
+records a bounded exception to the project's own money rule, and
+[0009](docs/adr/0009-zoneless-angular.md) records a decision that could only be
+settled by loading the application in a browser - it explains why the unit test
+that appeared to prove it proved nothing.
+
 ## Test it
 
     ./mvnw test
