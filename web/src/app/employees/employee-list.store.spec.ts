@@ -215,5 +215,15 @@ describe('EmployeeListStore', () => {
     mock.match(() => true).forEach(r => r.flush(pageOf()));
   }));
 
+  it('falls back to the first page when the page query parameter is malformed', () => {
+    // A hand-edited or stale bookmarked URL is exactly what this method
+    // exists to survive - it must not forward "NaN" to the server.
+    store.applyQueryParams({ page: 'banana' });
+    expect(store.page()).toBe(0);
+
+    store.applyQueryParams({ page: '-1' });
+    expect(store.page()).toBe(0);
+  });
+
   afterEach(() => mock.verify());
 });
