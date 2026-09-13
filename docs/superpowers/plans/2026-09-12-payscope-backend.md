@@ -3733,6 +3733,7 @@ The hot path. Implements spec §4, §6 and the list half of §8. This task is wh
 - Modify: `src/main/java/com/payscope/employee/EmployeeService.java` (add `search`)
 - Modify: `src/main/java/com/payscope/employee/EmployeeController.java` (add `GET /`)
 - Create: `src/test/java/com/payscope/support/QueryCounter.java`
+- Create: `src/test/java/com/payscope/support/DatabaseCleaner.java`
 - Test: `src/test/java/com/payscope/employee/EmployeeListApiTest.java`
 - Test: `src/test/java/com/payscope/employee/EmployeeListQueryCountTest.java`
 
@@ -3777,10 +3778,38 @@ public class QueryCounter {
 }
 ```
 
+`src/test/java/com/payscope/support/DatabaseCleaner.java`
+```java
+package com.payscope.support;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
+/**
+ * Any assertion about a total is an assertion about the whole table, and the API
+ * test classes commit rows that nothing rolls back. Called from @BeforeEach in
+ * every count-sensitive test. Reference data seeded by Flyway is left untouched.
+ */
+@Component
+public class DatabaseCleaner {
+
+    private final JdbcTemplate jdbc;
+
+    public DatabaseCleaner(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    public void clean() {
+        jdbc.execute("truncate table salary_history, salary, employee restart identity cascade");
+    }
+}
+```
+
 `src/test/java/com/payscope/employee/EmployeeListQueryCountTest.java`
 ```java
 package com.payscope.employee;
 
+import com.payscope.support.DatabaseCleaner;
 import com.payscope.support.FixedClockConfig;
 import com.payscope.support.IntegrationTest;
 import com.payscope.support.QueryCounter;
@@ -3809,8 +3838,14 @@ class EmployeeListQueryCountTest {
     @Autowired
     QueryCounter queries;
 
+    @Autowired
+    DatabaseCleaner cleaner;
+
     @BeforeEach
     void seedOneHundredAndTwentyEmployees() {
+        // Earlier test classes commit employees and nothing rolls them back, so a
+        // count assertion sees their rows too. Truncate first.
+        cleaner.clean();
         for (int i = 0; i < 120; i++) {
             service.create(new CreateEmployeeRequest(
                     "QC-%04d".formatted(i), "Person %04d".formatted(i), "qc%04d@acme.test".formatted(i),
@@ -3864,6 +3899,7 @@ class EmployeeListQueryCountTest {
 ```java
 package com.payscope.employee;
 
+import com.payscope.support.DatabaseCleaner;
 import com.payscope.support.FixedClockConfig;
 import com.payscope.support.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -3903,8 +3939,13 @@ class EmployeeListApiTest {
                 .andExpect(status().isCreated());
     }
 
+    @Autowired
+    DatabaseCleaner cleaner;
+
     @BeforeEach
     void seed() throws Exception {
+        // totalElements is a global count; earlier test classes leave rows behind.
+        cleaner.clean();
         create("L-001", "Asha Menon",  "l1@acme.test", "IN", "INR", "3712500.00", "ENGINEERING", "SENIOR");
         create("L-002", "Ben Carter",  "l2@acme.test", "GB", "GBP", "100000.00",  "ENGINEERING", "MID");
         create("L-003", "Chen Wei",    "l3@acme.test", "SG", "SGD", "120000.00",  "SALES",       "SENIOR");
@@ -4808,7 +4849,7 @@ different version columns and would not contend at all."
 
 Implements spec §8 summary and §12's exact-value testing rule. The fixture is the centre of gravity for every analytics test that follows — build it carefully, because Tasks 15 and 16 assert against the same numbers.
 
-**A problem this task must fix first.** Analytics assertions are counts and totals over the whole table, so they are corrupted by rows other test classes committed. Task 12's list tests have the same exposure (`totalElements` is a global count) and were written without it. This task introduces `DatabaseCleaner` and retrofits them.
+**On test isolation.** Analytics assertions are counts and totals over the whole table, so rows other test classes committed would corrupt them. `DatabaseCleaner` already exists — Task 12 introduced it for the same reason, since `totalElements` is also a global count. Use it here; do not create a second one.
 
 **The fixture — 12 employees, every figure hand-computed:**
 
@@ -4835,12 +4876,10 @@ Three properties are deliberate:
 Derived totals: headcount **12**, total CTC **1 405 077.50** USD, mean **117 089.79**, unbanded **1**, outliers **3** (U1, U4, I3).
 
 **Files:**
-- Create: `src/test/java/com/payscope/support/DatabaseCleaner.java`
 - Create: `src/test/java/com/payscope/support/Fixtures.java`
 - Create: `src/main/java/com/payscope/analytics/AnalyticsFilter.java`
 - Create: `src/main/java/com/payscope/analytics/dto/CompaRatioBucket.java`, `SummaryResponse.java`
 - Create: `src/main/java/com/payscope/analytics/AnalyticsRepository.java`, `AnalyticsService.java`, `AnalyticsController.java`
-- Modify: `src/test/java/com/payscope/employee/EmployeeListApiTest.java`, `EmployeeListQueryCountTest.java` (adopt `DatabaseCleaner`)
 - Test: `src/test/java/com/payscope/analytics/SummaryApiTest.java`
 
 **Interfaces:**
