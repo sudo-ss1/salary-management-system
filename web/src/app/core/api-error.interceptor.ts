@@ -17,6 +17,7 @@ function toApiError(response: HttpErrorResponse): ApiError {
       detail: 'We could not reach the server. Check your connection and try again.',
       fieldErrors: {},
       isConflict: false,
+      isVersionConflict: false,
     };
   }
 
@@ -33,5 +34,9 @@ function toApiError(response: HttpErrorResponse): ApiError {
     fieldErrors,
     currentVersion: problem.currentVersion,
     isConflict: response.status === 409,
+    // An unlabelled 409 is treated as a version conflict by default: that is
+    // the safe direction, since a reload prompt shown unnecessarily costs a
+    // click, while a silently swallowed uniqueness error costs the user's work.
+    isVersionConflict: response.status === 409 && problem.conflictKind !== 'UNIQUE_CONSTRAINT',
   };
 }

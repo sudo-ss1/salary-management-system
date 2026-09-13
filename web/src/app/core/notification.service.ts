@@ -12,11 +12,13 @@ export class NotificationService {
 
   /**
    * Field-level errors are bound to form controls by the caller, so only the
-   * rest reach the snackbar. A 409 is never announced here - it needs a reload
-   * prompt, not a transient toast.
+   * rest reach the snackbar. A stale-version conflict is never announced here
+   * either - it needs a reload prompt, not a transient toast. A uniqueness
+   * conflict (e.g. a duplicate email) has no reload prompt to show instead,
+   * so its message must reach the snackbar like any other error.
    */
   notifyError(error: ApiError): void {
-    if (Object.keys(error.fieldErrors).length > 0 || error.isConflict) {
+    if (Object.keys(error.fieldErrors).length > 0 || error.isVersionConflict) {
       return;
     }
     this.snackBar.open(error.detail, 'Dismiss', { duration: 6000 });
