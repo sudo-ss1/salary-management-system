@@ -59,6 +59,14 @@ class DistributionApiTest {
         // Germany's two middle salaries are 106920 and 130680. percentile_cont
         // returns their mean, 118800, which no employee actually earns. This is
         // what "median" means to the persona and what other comp tools report.
+        //
+        // Caveat: Germany's fixture is symmetric, so its p50 (118800.00) equals
+        // its mean (also 118800.00, asserted above) - an implementation that
+        // wired p50 straight to avg() would pass this assertion too. This test
+        // does not by itself discriminate percentile_cont from a mean. The
+        // discriminating case is the IN group in
+        // reports_exact_percentiles_for_an_odd_sized_group above, where p50
+        // (44550.00) and mean (45292.50) differ.
         mvc.perform(get("/api/analytics/distribution").param("groupBy", "COUNTRY"))
                 .andExpect(jsonPath(DE + ".p50.amount").value("118800.00"));
     }
@@ -125,6 +133,17 @@ class DistributionApiTest {
     }
 
     @Test
+    void treats_a_duplicated_grouping_dimension_as_a_single_one() throws Exception {
+        // ?groupBy=COUNTRY&groupBy=COUNTRY must behave exactly like ?groupBy=COUNTRY
+        // - not select the same column twice under the same alias, and not count
+        // as two dimensions against the two-dimension cap.
+        mvc.perform(get("/api/analytics/distribution").param("groupBy", "COUNTRY", "COUNTRY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(DE + ".headcount").value(4))
+                .andExpect(jsonPath(DE + ".p50.amount").value("118800.00"));
+    }
+
+    @Test
     void rejects_a_grouping_dimension_that_is_not_on_the_whitelist() throws Exception {
         mvc.perform(get("/api/analytics/distribution").param("groupBy", "SALARY"))
                 .andExpect(status().isBadRequest())
@@ -137,6 +156,17 @@ class DistributionApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].headcount").value(12));
+    }
+
+    @Test
+    void returns_an_empty_list_rather_than_an_error_when_no_one_matches_the_filter() throws Exception {
+        // Brazil x Principal matches nobody in the fixed dataset. With a groupBy,
+        // that means zero groups - group by produces no rows to group when there
+        // are no rows at all - not an error and not a group of zeroes.
+        mvc.perform(get("/api/analytics/distribution")
+                        .param("groupBy", "COUNTRY").param("country", "BR").param("level", "PRINCIPAL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test

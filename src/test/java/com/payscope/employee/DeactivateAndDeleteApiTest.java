@@ -1,5 +1,6 @@
 package com.payscope.employee;
 
+import com.jayway.jsonpath.JsonPath;
 import com.payscope.support.FixedClockConfig;
 import com.payscope.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -52,12 +54,24 @@ class DeactivateAndDeleteApiTest {
 
     @Test
     void deactivating_an_already_inactive_employee_succeeds_again() throws Exception {
+        // 200 and INACTIVE alone would also pass a non-idempotent implementation
+        // that bumped the version on every call. The property that actually
+        // matters is that the second call is a no-op: employeeVersion must be
+        // identical after both calls, not merely still equal to itself.
         long id = create("E-6002", "x2@acme.test");
-        mvc.perform(post("/api/employees/{id}/deactivate", id));
-
-        mvc.perform(post("/api/employees/{id}/deactivate", id))
+        String firstBody = mvc.perform(post("/api/employees/{id}/deactivate", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("INACTIVE"));
+                .andExpect(jsonPath("$.status").value("INACTIVE"))
+                .andReturn().getResponse().getContentAsString();
+        Number firstVersion = JsonPath.read(firstBody, "$.employeeVersion");
+
+        String secondBody = mvc.perform(post("/api/employees/{id}/deactivate", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INACTIVE"))
+                .andReturn().getResponse().getContentAsString();
+        Number secondVersion = JsonPath.read(secondBody, "$.employeeVersion");
+
+        assertThat(secondVersion.longValue()).isEqualTo(firstVersion.longValue());
     }
 
     @Test

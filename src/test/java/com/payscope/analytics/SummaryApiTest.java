@@ -104,6 +104,24 @@ class SummaryApiTest {
     }
 
     @Test
+    void returns_zero_valued_figures_rather_than_an_error_when_no_one_matches_the_filter() throws Exception {
+        // Brazil x Principal matches nobody in the fixed dataset. total_ctc's
+        // coalesce and mean_base's coalesce are what stand between this and a
+        // 500 from calling setScale on a null BigDecimal.
+        mvc.perform(get("/api/analytics/summary").param("country", "BR").param("level", "PRINCIPAL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.headcount").value(0))
+                .andExpect(jsonPath("$.totalCostToCompanyUsd.amount").value("0.00"))
+                .andExpect(jsonPath("$.meanBaseUsd.amount").value("0.00"))
+                .andExpect(jsonPath("$.unbandedCount").value(0))
+                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'LT_80')].headcount").value(0))
+                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B80_90')].headcount").value(0))
+                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B90_110')].headcount").value(0))
+                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'B110_120')].headcount").value(0))
+                .andExpect(jsonPath("$.compaRatioBuckets[?(@.bucket == 'GT_120')].headcount").value(0));
+    }
+
+    @Test
     void computes_the_whole_summary_in_a_single_statement() throws Exception {
         long statements = queries.countStatements(
                 () -> analytics.summary(new AnalyticsFilter(null, null, null, null, null)));

@@ -9,9 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import com.payscope.common.MoneyDto;
+import com.payscope.common.PagedResponse;
 import com.payscope.employee.dto.CreateEmployeeRequest;
+import com.payscope.employee.dto.EmployeeListItem;
 
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,7 +71,14 @@ class EmployeeListQueryCountTest {
 
     @Test
     void returns_salary_and_compa_ratio_on_every_row_without_a_further_query() {
-        PagedResponseAssertions.assertRowsArePopulated(service.search(pageOf(100)));
+        // The name promises no further query per row; only a statement count
+        // proves that. Populated fields alone would also pass a version that
+        // lazily loaded salary once per row.
+        AtomicReference<PagedResponse<EmployeeListItem>> result = new AtomicReference<>();
+        long statements = queries.countStatements(() -> result.set(service.search(pageOf(100))));
+
+        assertThat(statements).isEqualTo(2);
+        PagedResponseAssertions.assertRowsArePopulated(result.get());
     }
 
     /** Kept separate so the query-count assertions above stay unambiguous. */

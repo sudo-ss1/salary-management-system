@@ -1,5 +1,6 @@
 package com.payscope.employee;
 
+import com.jayway.jsonpath.JsonPath;
 import com.payscope.support.DatabaseCleaner;
 import com.payscope.support.FixedClockConfig;
 import com.payscope.support.IntegrationTest;
@@ -10,6 +11,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -98,6 +103,24 @@ class EmployeeListApiTest {
     }
 
     @Test
+    void accepts_any_case_of_desc_so_direction_parsing_matches_sort_parsing() throws Exception {
+        mvc.perform(get("/api/employees").param("sort", "SALARY").param("direction", "DESC"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].fullName").value("Ben Carter"));
+    }
+
+    @Test
+    void rejects_an_unrecognised_direction_rather_than_silently_sorting_ascending() throws Exception {
+        // "descending" is not "desc": the old behaviour (anything but a
+        // case-insensitive "desc" sorts ascending) would silently return
+        // ascending-sorted data here and tell the caller nothing.
+        mvc.perform(get("/api/employees").param("sort", "SALARY").param("direction", "descending"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("asc")))
+                .andExpect(jsonPath("$.detail", containsString("desc")));
+    }
+
+    @Test
     void excludes_soft_deleted_employees_from_the_list() throws Exception {
         String location = mvc.perform(post("/api/employees").contentType(APPLICATION_JSON).content("""
                         {
@@ -149,6 +172,82 @@ class EmployeeListApiTest {
         mvc.perform(get("/api/employees").param("level", "ARCHMAGE"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail", containsString("SENIOR")));
+    }
+
+    @Test
+    void breaks_a_tie_on_id_so_paging_through_identical_full_names_neither_skips_nor_repeats_a_row()
+            throws Exception {
+        // Three employees that tie on the sort column itself (full_name). Without
+        // a unique final sort key, ties among them have no defined relative order
+        // at all - paging through them one at a time must still hit each one
+        // exactly once, in a single well-defined order (ascending id).
+        create("T-101", "Tied Person", "tie1@acme.test", "IN", "INR", "3712500.00", "ENGINEERING", "SENIOR");
+        create("T-102", "Tied Person", "tie2@acme.test", "IN", "INR", "3712500.00", "ENGINEERING", "SENIOR");
+        create("T-103", "Tied Person", "tie3@acme.test", "IN", "INR", "3712500.00", "ENGINEERING", "SENIOR");
+
+        long id1 = idOf("tie1@acme.test");
+        long id2 = idOf("tie2@acme.test");
+        long id3 = idOf("tie3@acme.test");
+
+        List<Long> seen = new ArrayList<>();
+        for (int page = 0; page < 3; page++) {
+            seen.add(idOnPage("q", "Tied Person", "sort", "FULL_NAME", page));
+        }
+
+        assertThat(seen).containsExactly(id1, id2, id3);
+        // Membership alone (three distinct ids, union equal to the full set)
+        // would also pass without the tiebreaker here, because full_name already
+        // has a dedicated covering index - employee_default_sort on
+        // (full_name, id) - so this particular sort column happens to get its
+        // id-ordering for free from that index regardless of what the query's
+        // ORDER BY clause says. Asserting the exact ascending sequence is the
+        // stronger, still-correct property, and it is what the DEPARTMENT test
+        // below actually needs in order to discriminate.
+    }
+
+    @Test
+    void breaks_a_tie_on_id_when_the_sort_column_is_department_where_ties_are_the_normal_case()
+            throws Exception {
+        // Sorting by department, every row in one department ties by definition -
+        // this is the ordinary case, not a coincidence like the full-name test
+        // above. Unlike full_name, department has no covering index, so nothing
+        // protects tie order here except the explicit id tiebreaker.
+        //
+        // The @BeforeEach fixture already has two ENGINEERING and two SALES
+        // employees; three FINANCE employees keep department a genuine sort key
+        // (not one Postgres can fold away as constant with an equality filter)
+        // while sorting all seven unfiltered. ENGINEERING < FINANCE < SALES
+        // alphabetically, so the FINANCE trio always occupies offsets 2-4 - what
+        // the id tiebreaker controls is their order within that window.
+        create("T-201", "Dep One",   "dep1@acme.test", "IN", "INR", "3712500.00", "FINANCE", "SENIOR");
+        create("T-202", "Dep Two",   "dep2@acme.test", "IN", "INR", "3712500.00", "FINANCE", "SENIOR");
+        create("T-203", "Dep Three", "dep3@acme.test", "IN", "INR", "3712500.00", "FINANCE", "SENIOR");
+
+        long id1 = idOf("dep1@acme.test");
+        long id2 = idOf("dep2@acme.test");
+        long id3 = idOf("dep3@acme.test");
+
+        List<Long> seen = new ArrayList<>();
+        for (int page = 2; page < 5; page++) {
+            seen.add(idOnPage(null, null, "sort", "DEPARTMENT", page));
+        }
+
+        assertThat(seen).containsExactly(id1, id2, id3);
+    }
+
+    /** The id of the single row on a size=1 page of the given sort, with an optional filter. */
+    private long idOnPage(String filterParam, String filterValue, String sortParam, String sortValue, int page)
+            throws Exception {
+        var request = get("/api/employees")
+                .param(sortParam, sortValue)
+                .param("size", "1")
+                .param("page", String.valueOf(page));
+        if (filterParam != null) {
+            request.param(filterParam, filterValue);
+        }
+        String body = mvc.perform(request).andReturn().getResponse().getContentAsString();
+        Number id = JsonPath.read(body, "$.content[0].id");
+        return id.longValue();
     }
 
     /** Resolves an employee id by email through the list endpoint. */

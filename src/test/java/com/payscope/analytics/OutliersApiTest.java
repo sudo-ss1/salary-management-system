@@ -100,6 +100,16 @@ class OutliersApiTest {
     }
 
     @Test
+    void returns_an_empty_page_rather_than_an_error_when_no_one_matches_the_filter() throws Exception {
+        // Brazil x Principal matches nobody in the fixed dataset.
+        mvc.perform(get("/api/analytics/outliers").param("country", "BR").param("level", "PRINCIPAL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
+    }
+
+    @Test
     void rejects_a_page_size_above_one_hundred() throws Exception {
         mvc.perform(get("/api/analytics/outliers").param("size", "500"))
                 .andExpect(status().isBadRequest())
