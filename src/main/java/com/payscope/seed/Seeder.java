@@ -1,5 +1,6 @@
 package com.payscope.seed;
 
+import com.payscope.employee.Level;
 import com.payscope.seed.EmployeeGenerator.GeneratedEmployee;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Date;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,16 +23,28 @@ import java.util.Map;
 public class Seeder {
 
     private static final Logger log = LoggerFactory.getLogger(Seeder.class);
+    // pg_advisory_xact_lock keys are a single flat namespace for the whole
+    // database, not scoped to this table or feature - any other code taking an
+    // advisory lock anywhere in the app must pick a different constant.
     private static final long ADVISORY_LOCK_KEY = 8_675_309L;
     private static final LocalDate RATE_DATE = LocalDate.of(2026, 1, 1);
     private static final int BATCH_SIZE = 1000;
 
+    // V3__pay_band.sql scales a role's USD base by a level multiplier - PRINCIPAL
+    // 2.10, STAFF 1.70. Unbanded rows (PRINCIPAL recruiters/support
+    // specialists/accountants - the deliberate gap in that migration) derive
+    // their reference salary from the same ratio rather than a flat constant.
+    private static final BigDecimal PRINCIPAL_OVER_STAFF =
+            new BigDecimal("2.10").divide(new BigDecimal("1.70"), 6, RoundingMode.HALF_UP);
+
     private final JdbcTemplate jdbc;
     private final SeedProperties properties;
+    private final Clock clock;
 
-    public Seeder(JdbcTemplate jdbc, SeedProperties properties) {
+    public Seeder(JdbcTemplate jdbc, SeedProperties properties, Clock clock) {
         this.jdbc = jdbc;
         this.properties = properties;
+        this.clock = clock;
     }
 
     /**
@@ -61,8 +76,10 @@ public class Seeder {
         List<Long> ids = jdbc.queryForList(
                 "select nextval('employee_id_seq') from generate_series(1, ?)", Long.class, count);
 
+        LocalDate today = LocalDate.now(clock);
+
         insertEmployees(people, ids);
-        insertSalaries(people, ids, currencyByCountry, rateByCurrency, bandMidByKey);
+        insertSalaries(people, ids, currencyByCountry, rateByCurrency, bandMidByKey, today);
 
         log.info("Seeded {} employees in {} ms", count, System.currentTimeMillis() - started);
         return count;
@@ -93,7 +110,7 @@ public class Seeder {
 
     private void insertSalaries(List<GeneratedEmployee> people, List<Long> ids,
                                 Map<String, String> currencyByCountry, Map<String, BigDecimal> rateByCurrency,
-                                Map<String, BigDecimal> bandMidByKey) {
+                                Map<String, BigDecimal> bandMidByKey, LocalDate today) {
         List<Object[]> salaries = new ArrayList<>();
         List<Object[]> historyRows = new ArrayList<>();
 
@@ -102,36 +119,48 @@ public class Seeder {
             long id = ids.get(i);
             String currency = currencyByCountry.get(person.countryCode());
             BigDecimal rate = rateByCurrency.get(currency);
+            LocalDate hireDate = person.hireDate();
 
             BigDecimal mid = bandMidByKey.get(
                     person.role().name() + "|" + person.level().name() + "|" + person.countryCode());
-            // Unbanded combinations still need a plausible salary. 50000 USD
-            // converted into local currency is the fallback.
             BigDecimal reference = mid != null ? mid
-                    : new BigDecimal("50000").divide(rate, 2, RoundingMode.HALF_UP);
+                    : unbandedReference(person, bandMidByKey, rate);
 
             BigDecimal current = reference.multiply(BigDecimal.valueOf(person.bandFactor()))
                     .setScale(2, RoundingMode.HALF_UP);
-            LocalDate effectiveFrom = person.hireDate();
 
-            // Walk backwards: each earlier salary is 92% of the one after it.
+            // Anchored forward from the hire date, not backward from it: a raise
+            // count of n means n one-year steps have already happened, so the
+            // current salary cannot still be dated at hire. Capped at "today" (and
+            // the raise count reduced with it) so a very recently hired employee -
+            // fewer full years elapsed than their random raise count - cannot
+            // produce inverted or collapsed intervals.
+            long yearsSinceHire = ChronoUnit.YEARS.between(hireDate, today);
+            int raiseCount = (int) Math.min(person.raiseCount(), Math.max(0, yearsSinceHire));
+            LocalDate currentFrom = hireDate.plusYears(raiseCount);
+
+            // Walk backwards from the current amount to fill in each earlier period:
+            // each prior salary is 92% of the one that followed it. periodEnd is the
+            // boundary tying period k to period k+1: the current salary itself for
+            // the newest history row, the previous history row's effective_from
+            // otherwise.
             BigDecimal amount = current;
-            LocalDate from = effectiveFrom;
+            LocalDate periodEnd = currentFrom;
             List<Object[]> priors = new ArrayList<>();
-            for (int r = 0; r < person.raiseCount(); r++) {
+            for (int r = raiseCount - 1; r >= 0; r--) {
                 BigDecimal earlier = amount.multiply(new BigDecimal("0.92")).setScale(2, RoundingMode.HALF_UP);
-                LocalDate earlierFrom = from.minusYears(1);
+                LocalDate periodStart = hireDate.plusYears(r);
                 priors.add(new Object[]{id, earlier, currency, earlier.multiply(rate).setScale(2, RoundingMode.HALF_UP),
-                        rate, Date.valueOf(RATE_DATE), Date.valueOf(earlierFrom), Date.valueOf(from),
+                        rate, Date.valueOf(RATE_DATE), Date.valueOf(periodStart), Date.valueOf(periodEnd),
                         "Annual review"});
                 amount = earlier;
-                from = earlierFrom;
+                periodEnd = periodStart;
             }
             historyRows.addAll(priors);
 
             salaries.add(new Object[]{id, current, currency,
                     current.multiply(rate).setScale(2, RoundingMode.HALF_UP), rate,
-                    Date.valueOf(RATE_DATE), Date.valueOf(effectiveFrom)});
+                    Date.valueOf(RATE_DATE), Date.valueOf(currentFrom)});
         }
 
         jdbc.batchUpdate("""
@@ -153,6 +182,24 @@ public class Seeder {
                 ps.setObject(i + 1, arg[i]);
             }
         });
+    }
+
+    /**
+     * The unbanded population is exactly PRINCIPAL x {RECRUITER, SUPPORT_SPECIALIST,
+     * ACCOUNTANT} - the deliberate gap in V3__pay_band.sql. Rather than a flat
+     * salary regardless of level, derive it from that role's STAFF band in the
+     * same country, scaled by PRINCIPAL's multiplier over STAFF's. Only if even
+     * the STAFF band is missing - unreachable for the current seed - fall back
+     * to a flat USD-equivalent constant.
+     */
+    private BigDecimal unbandedReference(GeneratedEmployee person, Map<String, BigDecimal> bandMidByKey,
+                                         BigDecimal rate) {
+        BigDecimal staffMid = bandMidByKey.get(
+                person.role().name() + "|" + Level.STAFF.name() + "|" + person.countryCode());
+        if (staffMid != null) {
+            return staffMid.multiply(PRINCIPAL_OVER_STAFF).setScale(2, RoundingMode.HALF_UP);
+        }
+        return new BigDecimal("50000").divide(rate, 2, RoundingMode.HALF_UP);
     }
 
     // These use RowMapper + toMap rather than a bare jdbc.query lambda: a void
