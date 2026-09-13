@@ -29,7 +29,7 @@ export interface FilterChange {
       <mat-form-field appearance="outline">
         <mat-label>Country</mat-label>
         <mat-select [value]="value().country" (valueChange)="onChange('country', $event)">
-          <mat-option [value]="''">All countries</mat-option>
+          <mat-option [value]="null">All countries</mat-option>
           @for (option of countries; track option.value) {
             <mat-option [value]="option.value">{{ option.label }}</mat-option>
           }
@@ -39,7 +39,7 @@ export interface FilterChange {
       <mat-form-field appearance="outline">
         <mat-label>Department</mat-label>
         <mat-select [value]="value().department" (valueChange)="onChange('department', $event)">
-          <mat-option [value]="''">All departments</mat-option>
+          <mat-option [value]="null">All departments</mat-option>
           @for (option of departments; track option.value) {
             <mat-option [value]="option.value">{{ option.label }}</mat-option>
           }
@@ -49,7 +49,7 @@ export interface FilterChange {
       <mat-form-field appearance="outline">
         <mat-label>Level</mat-label>
         <mat-select [value]="value().level" (valueChange)="onChange('level', $event)">
-          <mat-option [value]="''">All levels</mat-option>
+          <mat-option [value]="null">All levels</mat-option>
           @for (option of levels; track option.value) {
             <mat-option [value]="option.value">{{ option.label }}</mat-option>
           }
@@ -60,7 +60,7 @@ export interface FilterChange {
         <mat-form-field appearance="outline">
           <mat-label>Status</mat-label>
           <mat-select [value]="value().status" (valueChange)="onChange('status', $event)">
-            <mat-option [value]="''">Active and inactive</mat-option>
+            <mat-option [value]="null">Active and inactive</mat-option>
             @for (option of statuses; track option.value) {
               <mat-option [value]="option.value">{{ option.label }}</mat-option>
             }
