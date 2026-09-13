@@ -153,6 +153,32 @@ describe('RecordRaiseDialogComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('One or more fields are invalid');
   });
 
+  it('surfaces a field error nothing renders instead of failing silently', () => {
+    const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+                                       changeReason: '' };
+
+    fixture.componentInstance.submit();
+    // salaryVersion is a real @NotNull field on RecordSalaryRequest that this
+    // dialog has no mat-error for. Because fieldErrors ends up non-empty, the
+    // generic banner would otherwise be suppressed too (this.message.set(null)
+    // in the "each mat-error already says what to fix" branch) - so nothing
+    // at all would appear on screen.
+    mock.expectOne('/api/employees/7/salary').flush(
+      {
+        title: 'Bad Request',
+        detail: 'One or more fields are invalid',
+        errors: [{ field: 'salaryVersion', message: 'must not be null' }],
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    fixture.detectChanges();
+
+    expect(dialogRef.close).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('must not be null');
+  });
+
   it('reports a replayed submission as a conflict rather than applying it twice', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
