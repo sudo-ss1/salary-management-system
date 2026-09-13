@@ -28,7 +28,7 @@ import { titleCase } from '../shared/reference';
 
     <app-filter-bar [value]="store.filters()" (changed)="onFilterChange($event)" />
 
-    <app-state-panel [state]="store.summary()" />
+    <app-state-panel [state]="store.summary()" (retry)="store.reload()" />
     @if (summaryData(); as summary) {
       <app-summary-tiles [summary]="summary" />
       <app-compa-ratio-histogram
@@ -49,7 +49,8 @@ import { titleCase } from '../shared/reference';
     <app-state-panel
       [state]="store.distribution()"
       [isEmpty]="groups().length === 0"
-      emptyMessage="No employees match these filters, so there is nothing to compare." />
+      emptyMessage="No employees match these filters, so there is nothing to compare."
+      (retry)="store.reload()" />
 
     @if (groups().length > 0) {
       <app-median-pay-chart [groups]="groups()" />

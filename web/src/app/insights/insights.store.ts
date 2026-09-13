@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of, startWith, switchMap } from 'rxjs';
+import { Subject, catchError, map, merge, of, startWith, switchMap } from 'rxjs';
 import { ApiError } from '../core/problem-detail';
 import { failed, loading, ready } from '../shared/request-state';
 import { AnalyticsApiService } from './analytics-api.service';
@@ -31,30 +31,52 @@ export class InsightsStore {
     status: this.status(),
   }));
 
+  private readonly distributionParams = computed(() => ({
+    filters: this.filters(),
+    groupBy: this.groupBy(),
+  }));
+
+  private readonly outlierParams = computed(() => ({
+    filters: this.filters(),
+    page: this.outlierPage(),
+    size: this.outlierSize(),
+    band: this.outlierBand(),
+  }));
+
+  /**
+   * A tick that re-issues all three requests with their current parameters,
+   * even when nothing has changed - the same Subject shape
+   * EmployeeDetailStore uses for its load(), needed for the same reason: a
+   * plain signal write is a no-op when the value is unchanged, so a retry
+   * click after an unchanged filter selection would otherwise do nothing.
+   */
+  private readonly reload$ = new Subject<void>();
+
   // No explicit type argument on toSignal: supplying one (e.g.
   // toSignal<RequestState<SummaryResponse>>(...)) breaks overload resolution
   // against ToSignalOptions.initialValue and fails to compile. Letting
   // inference derive the type from `initialValue` works.
   readonly summary = toSignal(
-    toObservable(this.filters).pipe(switchMap(filters => track(this.api.summary(filters)))),
+    merge(toObservable(this.filters), this.reload$.pipe(map(() => this.filters()))).pipe(
+      switchMap(filters => track(this.api.summary(filters))),
+    ),
     { initialValue: loading<SummaryResponse>() },
   );
 
   readonly distribution = toSignal(
-    toObservable(computed(() => ({ filters: this.filters(), groupBy: this.groupBy() }))).pipe(
+    merge(
+      toObservable(this.distributionParams),
+      this.reload$.pipe(map(() => this.distributionParams())),
+    ).pipe(
       switchMap(({ filters, groupBy }) => track(this.api.distribution(filters, groupBy))),
     ),
     { initialValue: loading<DistributionGroup[]>() },
   );
 
   readonly outliers = toSignal(
-    toObservable(
-      computed(() => ({
-        filters: this.filters(),
-        page: this.outlierPage(),
-        size: this.outlierSize(),
-        band: this.outlierBand(),
-      })),
+    merge(
+      toObservable(this.outlierParams),
+      this.reload$.pipe(map(() => this.outlierParams())),
     ).pipe(switchMap(({ filters, page, size, band }) =>
       track(this.api.outliers(filters, page, size, band)))),
     { initialValue: loading<OutlierPage>() },
@@ -87,6 +109,11 @@ export class InsightsStore {
     this.outlierBand.set(band);
     // A narrower band is a shorter list; page 4 of it may not exist.
     this.outlierPage.set(0);
+  }
+
+  /** Re-issues all three requests with their current parameters - what every Try again button calls. */
+  reload(): void {
+    this.reload$.next();
   }
 }
 

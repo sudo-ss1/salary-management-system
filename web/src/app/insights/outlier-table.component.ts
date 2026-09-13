@@ -28,7 +28,8 @@ const OUTLIER_BANDS: ReadonlyArray<CompaRatioBucketKey> = ['LT_80', 'GT_120'];
       <app-state-panel
         [state]="store.outliers()"
         [isEmpty]="rows().length === 0"
-        emptyMessage="Everyone with a pay band is inside it." />
+        emptyMessage="Everyone with a pay band is inside it."
+        (retry)="store.reload()" />
 
       @if (rows().length > 0) {
         <table mat-table [dataSource]="rows()">
