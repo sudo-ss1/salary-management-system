@@ -1,13 +1,34 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import {
-  EmployeeDetail, EmployeePage, EmployeeQuery, RecordRaiseBody, SalaryHistoryItem, UpdateEmployeeBody,
+  CreateEmployeeBody, EmployeeDetail, EmployeePage, EmployeeQuery, RecordRaiseBody,
+  SalaryHistoryItem, UpdateEmployeeBody,
 } from './employee.models';
+
+/**
+ * The server returns 201 with a Location header of the shape
+ * "/api/employees/{id}" and no response body (ResponseEntity<Void>) - the
+ * created id can only be read from there.
+ */
+function idFromLocation(location: string | null): number {
+  const match = location?.match(/\/(\d+)$/);
+  if (!match) {
+    throw new Error(`Could not read the created employee's id from the Location header: ${location}`);
+  }
+  return Number(match[1]);
+}
 
 @Injectable({ providedIn: 'root' })
 export class EmployeeApiService {
   private readonly http = inject(HttpClient);
+
+  /** Resolves to the new employee's id, read from the Location header. */
+  create(body: CreateEmployeeBody): Observable<number> {
+    return this.http
+      .post<void>('/api/employees', body, { observe: 'response' })
+      .pipe(map(response => idFromLocation(response.headers.get('Location'))));
+  }
 
   list(query: EmployeeQuery): Observable<EmployeePage> {
     let params = new HttpParams()
