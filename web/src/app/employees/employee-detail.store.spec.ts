@@ -83,7 +83,10 @@ describe('EmployeeDetailStore', () => {
 
     store.save(7, EDIT);
     mock.expectOne(r => r.method === 'PUT').flush(
-      { title: 'Conflict', detail: 'This record changed since you loaded it.', currentVersion: 3 },
+      {
+        title: 'Conflict', detail: 'This record changed since you loaded it.',
+        currentVersion: 3, conflictKind: 'STALE_VERSION',
+      },
       { status: 409, statusText: 'Conflict' },
     );
 
@@ -92,6 +95,27 @@ describe('EmployeeDetailStore', () => {
     expect(store.conflict()).toBe(true);
     expect(store.saving()).toBe(false);
     mock.expectNone(r => r.method === 'PUT');
+  });
+
+  it('does not raise the reload banner for a uniqueness conflict', () => {
+    store.load(7);
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+
+    store.save(7, EDIT);
+    mock.expectOne(r => r.method === 'PUT').flush(
+      {
+        title: 'Conflict', detail: 'That email address is already in use',
+        conflictKind: 'UNIQUE_CONSTRAINT',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    // A duplicate email is a 409, but it is not a stale version: the reload
+    // banner would be both wrong (nothing about this record changed) and
+    // useless (reloading would not free up the email address). The message
+    // itself is the notification service's job to surface, not this store's.
+    expect(store.conflict()).toBe(false);
+    expect(store.saving()).toBe(false);
   });
 
   it('surfaces field errors so the form can highlight the offending input', () => {
