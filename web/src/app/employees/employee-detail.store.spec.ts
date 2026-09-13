@@ -192,6 +192,44 @@ describe('EmployeeDetailStore', () => {
     expect(state.status).toBe('ready');
   });
 
+  it('does not let a late save response for an abandoned employee repaint a newer one', () => {
+    store.load(7);
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+
+    store.save(7, EDIT);
+    const staleSave = mock.expectOne(r => r.method === 'PUT');
+
+    // Navigate to employee 8 before employee 7's save answers. The store is
+    // component-provided and the component survives a route-id change, so
+    // this is reachable: the Save button being disabled during `saving`
+    // prevents a double submit, but does nothing to prevent navigation.
+    store.load(8);
+    mock.expectOne('/api/employees/8').flush({ ...DETAIL, id: 8, employeeNumber: 'E-008', fullName: 'Ben Ortiz' });
+
+    // Employee 7's save finally answers - it was applied server-side, so the
+    // request is correctly left to complete rather than cancelled, but its
+    // result must not repaint employee 8's page.
+    staleSave.flush({ ...DETAIL, fullName: 'Asha Menon-Rao', employeeVersion: 1 });
+
+    const state = store.state();
+    expect(state.status === 'ready' && state.data.id).toBe(8);
+    expect(state.status === 'ready' && state.data.fullName).toBe('Ben Ortiz');
+  });
+
+  it('still applies a save result while its employee remains on screen', () => {
+    // The guard above must not be so broad that it stops ordinary saves from
+    // ever landing - only a save for an id that is no longer active is held back.
+    store.load(7);
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+
+    store.save(7, EDIT);
+    mock.expectOne(r => r.method === 'PUT').flush({ ...DETAIL, fullName: 'Asha Menon-Rao', employeeVersion: 1 });
+
+    const state = store.state();
+    expect(state.status === 'ready' && state.data.fullName).toBe('Asha Menon-Rao');
+    expect(store.saving()).toBe(false);
+  });
+
   it('reports a missing employee as not found rather than an empty record', () => {
     store.load(999);
     mock.expectOne('/api/employees/999').flush(
