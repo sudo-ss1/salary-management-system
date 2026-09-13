@@ -48,16 +48,28 @@ describe('EmployeeListComponent', () => {
     return harness;
   }
 
+  /** The table row whose cells contain the given employee's name. */
+  function rowFor(harness: RouterTestingHarness, name: string): HTMLElement {
+    const rows = Array.from(harness.routeNativeElement!.querySelectorAll('tr'));
+    const row = rows.find(tr => tr.textContent?.includes(name));
+    if (!row) {
+      throw new Error(`no row found for "${name}"`);
+    }
+    return row as HTMLElement;
+  }
+
   it('shows each salary in its own currency alongside the USD equivalent', fakeAsync(async () => {
     const harness = await open();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(PAGE);
     harness.detectChanges();
 
-    const text = harness.routeNativeElement!.textContent!;
-    expect(text).toContain('Asha Menon');
-    expect(text).toContain('₹');          // original currency
-    expect(text).toContain('$44,550.00'); // USD equivalent, side by side
+    // Scoped to Asha's own row, not the page as a whole - a bug that renders
+    // one row's USD figure into another's would still leave both substrings
+    // present somewhere on the page, but not paired in the same row.
+    const ashaRow = rowFor(harness, 'Asha Menon');
+    expect(ashaRow.textContent).toContain('₹');          // original currency
+    expect(ashaRow.textContent).toContain('$44,550.00'); // USD equivalent, side by side
   }));
 
   it('flags an employee outside the band so the row is scannable', fakeAsync(async () => {
@@ -66,8 +78,13 @@ describe('EmployeeListComponent', () => {
     mock.expectOne(r => r.url === '/api/employees').flush(PAGE);
     harness.detectChanges();
 
-    const outOfBand = harness.routeNativeElement!.querySelectorAll('.compa-ratio.out-of-band');
-    expect(outOfBand.length).toBe(1); // Ben at 0.70, not Asha at 1.00
+    // Identity, not just count: a bug that flagged "the second row" by
+    // position rather than reading each row's own compaRatio would also
+    // produce exactly one flagged element and pass a count-only assertion.
+    const benRow = rowFor(harness, 'Ben Carter');
+    const ashaRow = rowFor(harness, 'Asha Menon');
+    expect(benRow.querySelectorAll('.compa-ratio.out-of-band').length).toBe(1); // Ben at 0.70
+    expect(ashaRow.querySelectorAll('.compa-ratio.out-of-band').length).toBe(0); // Asha at 1.00
   }));
 
   it('reports the server-side total rather than the number of rows on screen', fakeAsync(async () => {
