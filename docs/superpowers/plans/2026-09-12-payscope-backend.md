@@ -31,6 +31,9 @@ Every task's requirements implicitly include this section.
 - **Commit locally. Never push.** No remotes, ever.
 - **No AI attribution in commit messages.** No `Co-authored-by`, no generation trailers, no emoji.
 - **Schema changes are new Flyway migrations.** Never edit an applied one.
+- **Money read from a native query goes through `Money.of` before reaching the wire.**
+  Amount columns are `numeric(19,4)`, so the driver returns scale 4 whatever the
+  currency's minor units are. Emitting that raw puts `"3712500.0000"` on the wire.
 - **Every optional filter in a native query is cast: `cast(:p as text) is null or col = cast(:p as text)`.**
   PostgreSQL cannot infer a type for an untyped null bind and fails the statement.
   Cast - never concatenate - so the filters stay bind parameters.
@@ -4193,6 +4196,7 @@ public record EmployeeListItem(
 ```java
 package com.payscope.employee;
 
+import com.payscope.common.Money;
 import com.payscope.common.MoneyDto;
 import com.payscope.common.PagedResponse;
 import com.payscope.employee.dto.EmployeeListItem;
@@ -4202,6 +4206,7 @@ import jakarta.persistence.Tuple;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 import java.util.List;
 
 /**
@@ -4286,6 +4291,15 @@ public class EmployeeListRepository {
 
     private static EmployeeListItem toItem(Tuple t) {
         BigDecimal compaRatio = t.get("compa_ratio", BigDecimal.class);
+        // amount_original/amount_base_usd are numeric(19,4) columns, so Postgres
+        // always returns a scale-4 BigDecimal regardless of the currency's own
+        // fraction digits. Money.of rescales to the currency's minor unit - the
+        // same normalisation the detail endpoint gets via Salary.original().
+        String currencyCode = t.get("currency_code", String.class);
+        Money original = Money.of(t.get("amount_original", BigDecimal.class),
+                Currency.getInstance(currencyCode));
+        Money baseUsd = Money.of(t.get("amount_base_usd", BigDecimal.class),
+                Currency.getInstance("USD"));
         return new EmployeeListItem(
                 ((Number) t.get("id")).longValue(),
                 t.get("employee_number", String.class),
@@ -4296,9 +4310,8 @@ public class EmployeeListRepository {
                 t.get("job_role", String.class),
                 t.get("job_level", String.class),
                 t.get("status", String.class),
-                new MoneyDto(t.get("amount_original", BigDecimal.class).toPlainString(),
-                        t.get("currency_code", String.class)),
-                new MoneyDto(t.get("amount_base_usd", BigDecimal.class).toPlainString(), "USD"),
+                MoneyDto.from(original),
+                MoneyDto.from(baseUsd),
                 compaRatio);
     }
 }
@@ -5880,6 +5893,7 @@ public record OutlierItem(Long employeeId, String employeeNumber, String fullNam
 `src/main/java/com/payscope/analytics/AnalyticsRepository.java` — add:
 ```java
 // add to imports
+import com.payscope.common.Money;
 import com.payscope.common.PagedResponse;
 import com.payscope.salary.CompaRatio;
 
@@ -5920,10 +5934,13 @@ import com.payscope.salary.CompaRatio;
                 row.get("country_code", String.class),
                 row.get("job_role", String.class),
                 row.get("job_level", String.class),
-                new MoneyDto(row.get("amount_original", BigDecimal.class).toPlainString(),
-                        row.get("currency_code", String.class)),
-                new MoneyDto(row.get("band_mid", BigDecimal.class).toPlainString(),
-                        row.get("currency_code", String.class)),
+                // Rescaled through Money, not emitted raw: these are numeric(19,4)
+                // columns and would otherwise carry four decimal places for a
+                // currency with two. Same reason as the list projection.
+                MoneyDto.from(Money.of(row.get("amount_original", BigDecimal.class),
+                        Currency.getInstance(row.get("currency_code", String.class)))),
+                MoneyDto.from(Money.of(row.get("band_mid", BigDecimal.class),
+                        Currency.getInstance(row.get("currency_code", String.class)))),
                 row.get("compa_ratio", BigDecimal.class))).toList();
 
         return PagedResponse.of(content, page, size, total.longValue());
