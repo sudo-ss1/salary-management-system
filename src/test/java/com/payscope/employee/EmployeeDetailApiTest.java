@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -95,7 +96,11 @@ class EmployeeDetailApiTest {
     @Test
     void returns_not_found_for_an_id_that_never_existed() throws Exception {
         mvc.perform(get("/api/employees/{id}", 999_999_999L))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                // Assert the problem body, not just the status: an unmapped or
+                // broken route also yields 404, so a status-only assertion would
+                // pass even if this handler were never reached.
+                .andExpect(jsonPath("$.detail").value(containsString("999999999")));
     }
 
     @Test
@@ -105,6 +110,7 @@ class EmployeeDetailApiTest {
         mvc.perform(delete("/api/employees/{id}", id));
 
         mvc.perform(get("/api/employees/{id}", id))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value(containsString(String.valueOf(id))));
     }
 }
