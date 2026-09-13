@@ -1,5 +1,6 @@
 package com.payscope.analytics.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.payscope.common.MoneyDto;
 
@@ -13,5 +14,8 @@ import java.util.Map;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record DistributionGroup(Map<String, String> key, long headcount, MoneyDto p25, MoneyDto p50,
-                                MoneyDto p75, MoneyDto p90, MoneyDto mean, BigDecimal medianCompaRatio) {
+                                MoneyDto p75, MoneyDto p90, MoneyDto mean,
+                                // A decimal the server computed, not a number to do maths with -
+                                // crosses the wire as a scaled string so trailing zeros survive.
+                                @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal medianCompaRatio) {
 }

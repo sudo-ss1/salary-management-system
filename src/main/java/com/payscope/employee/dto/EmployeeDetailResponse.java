@@ -1,5 +1,6 @@
 package com.payscope.employee.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.payscope.common.MoneyDto;
 import com.payscope.employee.Department;
@@ -27,7 +28,9 @@ public record EmployeeDetailResponse(
         MoneyDto salary,
         MoneyDto salaryBaseUsd,
         LocalDate salaryEffectiveFrom,
-        BigDecimal compaRatio,
+        // A decimal the server computed, not a number to do maths with - crosses
+        // the wire as a scaled string so trailing zeros survive, same as money.
+        @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal compaRatio,
         MoneyDto bandMin,
         MoneyDto bandMid,
         MoneyDto bandMax,
