@@ -7,11 +7,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { DEPARTMENTS, EMPLOYMENT_TYPES, LEVELS, ROLES, titleCase } from '../shared/reference';
 import { SalaryHistoryComponent } from './salary-history.component';
+import { RecordRaiseDialogComponent } from './record-raise-dialog.component';
 import { EmployeeDetailStore } from './employee-detail.store';
+import { EmployeeDetail } from './employee.models';
 
 @Component({
   selector: 'app-employee-detail',
@@ -100,6 +103,7 @@ import { EmployeeDetailStore } from './employee-detail.store';
             <h2>Current pay</h2>
             <p class="figure">{{ person.salary | money }}</p>
             <p class="muted">{{ person.salaryBaseUsd | money }} at the recorded rate</p>
+            <button mat-stroked-button (click)="openRaiseDialog(person)">Record a raise</button>
 
             @if (person.bandMid) {
               <p>
@@ -140,6 +144,7 @@ export class EmployeeDetailComponent {
   readonly id = input.required<string>();
 
   protected readonly store = inject(EmployeeDetailStore);
+  private readonly dialog = inject(MatDialog);
   protected readonly departments = DEPARTMENTS;
   protected readonly roles = ROLES;
   protected readonly levels = LEVELS;
@@ -178,5 +183,21 @@ export class EmployeeDetailComponent {
       return;
     }
     this.store.save(+this.id(), { ...this.form, employeeVersion: person.employeeVersion });
+  }
+
+  protected openRaiseDialog(person: EmployeeDetail): void {
+    const ref = this.dialog.open(RecordRaiseDialogComponent, {
+      data: {
+        employeeId: person.id,
+        currency: person.salary.currency,
+        salaryVersion: person.salaryVersion,
+        currentEffectiveFrom: person.salaryEffectiveFrom,
+      },
+    });
+    ref.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.store.load(+this.id());
+      }
+    });
   }
 }
