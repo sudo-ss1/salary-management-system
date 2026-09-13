@@ -75,10 +75,10 @@ class CurrencyConverterTest {
 
     @Test
     void refuses_to_convert_when_no_rate_exists_on_or_before_the_date() {
-        assertThatThrownBy(() -> converter.toUsd(Money.of("100.00", "GBP"), LocalDate.of(2025, 12, 31)))
+        assertThatThrownBy(() -> converter.toUsd(Money.of("100.00", "GBP"), LocalDate.of(1999, 12, 31)))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("GBP")
-                .hasMessageContaining("2025-12-31");
+                .hasMessageContaining("1999-12-31");
     }
 
     @Test
