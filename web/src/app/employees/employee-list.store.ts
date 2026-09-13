@@ -110,6 +110,16 @@ export class EmployeeListStore {
     this.search.set((params['q'] as string) ?? '');
     this.sort.set((params['sort'] as EmployeeSort) ?? 'FULL_NAME');
     this.direction.set((params['direction'] as SortDirection) ?? 'asc');
-    this.page.set(Number(params['page'] ?? 0));
+    this.page.set(toPageNumber(params['page']));
   }
+}
+
+/**
+ * A hand-edited or stale bookmarked URL is exactly what applyQueryParams
+ * exists to survive: ?page=banana must not become NaN and get sent to the
+ * server as the literal string "NaN", and ?page=-1 is equally not a page.
+ */
+function toPageNumber(value: unknown): number {
+  const page = Number(value ?? 0);
+  return Number.isInteger(page) && page >= 0 ? page : 0;
 }
