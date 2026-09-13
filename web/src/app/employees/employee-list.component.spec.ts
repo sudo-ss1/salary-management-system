@@ -142,5 +142,17 @@ describe('EmployeeListComponent', () => {
     expect(harness.routeNativeElement!.textContent).toContain('reach the server');
   }));
 
+  it('offers a way to add an employee - otherwise the feature has no entry point', fakeAsync(async () => {
+    const harness = await open();
+    tick(300);
+    mock.expectOne(r => r.url === '/api/employees').flush(PAGE);
+    harness.detectChanges();
+
+    const link: HTMLAnchorElement | null =
+      harness.routeNativeElement!.querySelector('a[href="/employees/new"]');
+    expect(link).not.toBeNull();
+    expect(link!.textContent).toContain('Add employee');
+  }));
+
   afterEach(() => mock.verify());
 });
