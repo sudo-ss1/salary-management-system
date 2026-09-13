@@ -28,6 +28,25 @@ function pageOf(...names: string[]): EmployeePage {
   };
 }
 
+/**
+ * toObservable() feeds a root effect, and a root effect does not run
+ * synchronously when created or when a signal it reads changes - it only
+ * runs once Angular flushes pending effects. In the real (zoneless) app,
+ * the change-detection scheduler does that for us continuously. Here, with
+ * the store built in a plain (non-fakeAsync) beforeEach and no component
+ * fixture ever created, nothing ever calls that flush automatically -
+ * fakeAsync's tick() cannot substitute for it either, because the flush the
+ * scheduler *would* have scheduled is a real setTimeout/requestAnimationFrame
+ * race owned by whichever zone was active the moment it was requested, never
+ * the fake one tick() controls. TestBed.tick() runs pending effects
+ * synchronously, in whatever zone calls it, which is what tick()-driven
+ * assertions here actually need. Delete this and the store looks identical -
+ * but every request past the first stops arriving.
+ */
+function settle(): void {
+  TestBed.tick();
+}
+
 describe('EmployeeListStore', () => {
   let store: EmployeeListStore;
   let mock: HttpTestingController;
@@ -44,6 +63,7 @@ describe('EmployeeListStore', () => {
   });
 
   it('requests the first page with the default sort on creation', fakeAsync(() => {
+    settle();
     tick(300);
     const request = mock.expectOne(r => r.url === '/api/employees');
     expect(request.request.params.get('page')).toBe('0');
@@ -53,16 +73,21 @@ describe('EmployeeListStore', () => {
   }));
 
   it('cancels a superseded search rather than rendering a query the user has left', fakeAsync(() => {
+    settle();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(pageOf());
 
     store.setSearch('Jo');
+    settle();
     tick(300);
-    const stale = mock.expectOne(r => r.request.params.get('q') === 'Jo');
+    settle();
+    const stale = mock.expectOne(r => r.params.get('q') === 'Jo');
 
     store.setSearch('John');
+    settle();
     tick(300);
-    const current = mock.expectOne(r => r.request.params.get('q') === 'John');
+    settle();
+    const current = mock.expectOne(r => r.params.get('q') === 'John');
 
     // The first request is unsubscribed by switchMap, so a late response for
     // "Jo" can never repaint the table.
@@ -75,15 +100,20 @@ describe('EmployeeListStore', () => {
   }));
 
   it('waits for typing to settle before asking the server', fakeAsync(() => {
+    settle();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(pageOf());
 
     store.setSearch('J');
+    settle();
     tick(100);
     store.setSearch('Jo');
+    settle();
     tick(100);
     store.setSearch('Joh');
+    settle();
     tick(300);
+    settle();
 
     // One request for the settled text, not three for the keystrokes.
     const requests = mock.match(r => r.url === '/api/employees');
@@ -93,33 +123,39 @@ describe('EmployeeListStore', () => {
   }));
 
   it('returns to the first page whenever a filter changes', fakeAsync(() => {
+    settle();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(pageOf());
 
     store.setPage(4);
+    settle();
     tick(300);
-    mock.expectOne(r => r.request.params.get('page') === '4').flush(pageOf());
+    mock.expectOne(r => r.params.get('page') === '4').flush(pageOf());
 
     store.setFilter('country', 'IN');
+    settle();
     tick(300);
 
     // Staying on page 5 of a narrower result set would show an empty table.
-    const request = mock.expectOne(r => r.request.params.get('country') === 'IN');
+    const request = mock.expectOne(r => r.params.get('country') === 'IN');
     expect(request.request.params.get('page')).toBe('0');
     request.flush(pageOf());
   }));
 
   it('keeps the current page when only the page changes', fakeAsync(() => {
+    settle();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(pageOf());
 
     store.setPage(2);
+    settle();
     tick(300);
-    mock.expectOne(r => r.request.params.get('page') === '2').flush(pageOf());
+    mock.expectOne(r => r.params.get('page') === '2').flush(pageOf());
     expect(store.page()).toBe(2);
   }));
 
   it('omits filters that are not set rather than sending empty strings', fakeAsync(() => {
+    settle();
     tick(300);
     const request = mock.expectOne(r => r.url === '/api/employees');
     expect(request.request.params.has('country')).toBe(false);
@@ -132,6 +168,7 @@ describe('EmployeeListStore', () => {
   });
 
   it('exposes an error state the screen can render', fakeAsync(() => {
+    settle();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(
       { title: 'Something went wrong', detail: 'The request could not be completed.' },
@@ -144,6 +181,7 @@ describe('EmployeeListStore', () => {
   }));
 
   it('round-trips its state through url query parameters', fakeAsync(() => {
+    settle();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(pageOf());
 
@@ -151,6 +189,7 @@ describe('EmployeeListStore', () => {
     store.setFilter('level', 'SENIOR');
     store.setSort('SALARY', 'desc');
     store.setPage(3);
+    settle();
     tick(300);
     mock.match(r => r.url === '/api/employees').forEach(r => r.flush(pageOf()));
 
@@ -171,6 +210,7 @@ describe('EmployeeListStore', () => {
     expect(store.direction()).toBe('desc');
     expect(store.page()).toBe(3);
 
+    settle();
     tick(300);
     mock.match(() => true).forEach(r => r.flush(pageOf()));
   }));
