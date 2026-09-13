@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  AnalyticsFilterValues, DistributionGroup, GroupByDimension, OutlierPage, SummaryResponse,
+  AnalyticsFilterValues, DistributionGroup, GroupByDimension, OutlierBand, OutlierPage, SummaryResponse,
 } from './analytics.models';
 
 @Injectable({ providedIn: 'root' })
@@ -24,8 +24,16 @@ export class AnalyticsApiService {
     return this.http.get<DistributionGroup[]>('/api/analytics/distribution', { params });
   }
 
-  outliers(filters: AnalyticsFilterValues, page: number, size: number): Observable<OutlierPage> {
-    const params = toParams(filters).set('page', page).set('size', size);
+  outliers(
+    filters: AnalyticsFilterValues,
+    page: number,
+    size: number,
+    band: OutlierBand | null,
+  ): Observable<OutlierPage> {
+    let params = toParams(filters).set('page', page).set('size', size);
+    if (band) {
+      params = params.set('band', band);
+    }
     return this.http.get<OutlierPage>('/api/analytics/outliers', { params });
   }
 }

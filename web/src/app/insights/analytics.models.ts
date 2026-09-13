@@ -2,6 +2,8 @@ import { Money } from '../core/money';
 
 export type GroupByDimension = 'DEPARTMENT' | 'COUNTRY' | 'ROLE' | 'LEVEL';
 export type CompaRatioBucketKey = 'LT_80' | 'B80_90' | 'B90_110' | 'B110_120' | 'GT_120';
+/** The two directions the outlier endpoint accepts. In-band buckets are not outlier bands. */
+export type OutlierBand = 'LT_80' | 'GT_120';
 
 export interface CompaRatioBucket {
   readonly bucket: CompaRatioBucketKey;

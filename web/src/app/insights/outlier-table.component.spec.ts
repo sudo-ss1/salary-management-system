@@ -2,6 +2,7 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
 import { apiErrorInterceptor } from '../core/api-error.interceptor';
 import { InsightsStore } from './insights.store';
 import { OutlierTableComponent } from './outlier-table.component';
@@ -29,6 +30,9 @@ describe('OutlierTableComponent', () => {
         provideHttpClient(withInterceptors([apiErrorInterceptor])),
         provideHttpClientTesting(),
         provideNoopAnimations(),
+        // OutlierTableComponent links to the employee detail page, which needs
+        // a router in place (RouterLink injects ActivatedRoute unconditionally).
+        provideRouter([]),
       ],
     }).compileComponents();
     mock = TestBed.inject(HttpTestingController);
@@ -43,9 +47,24 @@ describe('OutlierTableComponent', () => {
     return fixture;
   }
 
+  /**
+   * InsightsStore is shared by the whole insights view and fires its summary
+   * and distribution requests as soon as it is constructed, whether or not
+   * this component reads them. Neither depends on outlierBand, so each test
+   * sees exactly one pair of them, fired once at construction.
+   */
+  function flushSharedStoreRequests(): void {
+    mock.match(r => r.url === '/api/analytics/summary').forEach(r => r.flush({
+      headcount: 0, totalCostToCompanyUsd: { amount: '0.00', currency: 'USD' },
+      meanBaseUsd: { amount: '0.00', currency: 'USD' }, unbandedCount: 0, compaRatioBuckets: [],
+    }));
+    mock.match(r => r.url === '/api/analytics/distribution').forEach(r => r.flush([]));
+  }
+
   it('shows each outlier in their own currency against their own band', fakeAsync(() => {
     const fixture = render();
     tick();
+    flushSharedStoreRequests();
     mock.expectOne(r => r.url === '/api/analytics/outliers').flush(PAGE);
     fixture.detectChanges();
 
@@ -59,6 +78,7 @@ describe('OutlierTableComponent', () => {
   it('asks the server for one direction when a bar is selected', fakeAsync(() => {
     const fixture = render();
     tick();
+    flushSharedStoreRequests();
     mock.expectOne(r => r.url === '/api/analytics/outliers').flush(PAGE);
 
     fixture.componentRef.setInput('selectedBucket', 'LT_80');
@@ -74,6 +94,7 @@ describe('OutlierTableComponent', () => {
   it('explains that an in-band selection has nothing to review', fakeAsync(() => {
     const fixture = render();
     tick();
+    flushSharedStoreRequests();
     mock.expectOne(r => r.url === '/api/analytics/outliers').flush(PAGE);
 
     fixture.componentRef.setInput('selectedBucket', 'B90_110');
@@ -87,6 +108,7 @@ describe('OutlierTableComponent', () => {
   it('says everyone is within band rather than showing an empty table', fakeAsync(() => {
     const fixture = render();
     tick();
+    flushSharedStoreRequests();
     mock.expectOne(r => r.url === '/api/analytics/outliers')
       .flush({ content: [], page: 0, size: 25, totalElements: 0, totalPages: 0 });
     fixture.detectChanges();

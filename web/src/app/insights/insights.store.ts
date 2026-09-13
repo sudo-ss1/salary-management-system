@@ -5,7 +5,7 @@ import { ApiError } from '../core/problem-detail';
 import { failed, loading, ready } from '../shared/request-state';
 import { AnalyticsApiService } from './analytics-api.service';
 import {
-  AnalyticsFilterValues, DistributionGroup, GroupByDimension, OutlierPage, SummaryResponse,
+  AnalyticsFilterValues, DistributionGroup, GroupByDimension, OutlierBand, OutlierPage, SummaryResponse,
 } from './analytics.models';
 
 export const MAX_GROUP_BY = 2;
@@ -22,6 +22,7 @@ export class InsightsStore {
   readonly groupBy = signal<readonly GroupByDimension[]>(['COUNTRY']);
   readonly outlierPage = signal(0);
   readonly outlierSize = signal(25);
+  readonly outlierBand = signal<OutlierBand | null>(null);
 
   readonly filters = computed<AnalyticsFilterValues>(() => ({
     country: this.country(),
@@ -48,8 +49,14 @@ export class InsightsStore {
 
   readonly outliers = toSignal(
     toObservable(
-      computed(() => ({ filters: this.filters(), page: this.outlierPage(), size: this.outlierSize() })),
-    ).pipe(switchMap(({ filters, page, size }) => track(this.api.outliers(filters, page, size)))),
+      computed(() => ({
+        filters: this.filters(),
+        page: this.outlierPage(),
+        size: this.outlierSize(),
+        band: this.outlierBand(),
+      })),
+    ).pipe(switchMap(({ filters, page, size, band }) =>
+      track(this.api.outliers(filters, page, size, band)))),
     { initialValue: loading<OutlierPage>() },
   );
 
@@ -69,6 +76,12 @@ export class InsightsStore {
 
   setOutlierPage(page: number): void {
     this.outlierPage.set(page);
+  }
+
+  setOutlierBand(band: OutlierBand | null): void {
+    this.outlierBand.set(band);
+    // A narrower band is a shorter list; page 4 of it may not exist.
+    this.outlierPage.set(0);
   }
 }
 
