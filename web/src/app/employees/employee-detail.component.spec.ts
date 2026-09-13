@@ -65,6 +65,20 @@ describe('EmployeeDetailComponent', () => {
     expect(harness.routeNativeElement!.querySelector('[role="alert"]')).toBeNull();
   }));
 
+  it('shows hire date, employee number and status as read-only facts about the record', fakeAsync(async () => {
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+    harness.detectChanges();
+
+    // requirements.md section 3 lists these as part of every employee record;
+    // they are facts about the record, not editable fields in this form, so
+    // there is no input to bind them to - just visible text.
+    const text = harness.routeNativeElement!.textContent!;
+    expect(text).toContain('E-007');
+    expect(text).toContain('2024-03-01');
+    expect(text).toContain('Active');
+  }));
+
   it('offers a reload rather than retrying when the record changed underneath', fakeAsync(async () => {
     const harness = await RouterTestingHarness.create('/employees/7');
     mock.expectOne('/api/employees/7').flush(DETAIL);
