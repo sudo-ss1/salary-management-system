@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { take } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
@@ -94,12 +96,38 @@ import { groupLabel } from '../shared/group-label';
 })
 export class InsightsComponent {
   protected readonly store = inject(InsightsStore);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
   protected readonly dimensions: GroupByDimension[] = ['COUNTRY', 'DEPARTMENT', 'ROLE', 'LEVEL'];
   protected readonly percentiles = ['p25', 'p50', 'p75', 'p90', 'mean'];
   protected readonly columns =
     ['group', 'headcount', 'p25', 'p50', 'p75', 'p90', 'mean', 'medianCompaRatio'];
   protected readonly label = titleCase;
   protected readonly selectedBucket = signal<CompaRatioBucketKey | null>(null);
+
+  constructor() {
+    // Read once on entry so a shared or bookmarked URL restores its view
+    // before anything else runs - same ordering EmployeeListComponent
+    // relies on and for the same reason: take(1) resolves synchronously
+    // here, so the restore lands before the effect below's first
+    // (asynchronous) run and cannot be stripped by it, and the effect's own
+    // navigation has nobody left listening to feed back into the store.
+    this.route.queryParams.pipe(take(1)).subscribe(params => {
+      this.store.applyQueryParams(params);
+      // selectedBucket lives on the component, not the store, so it is
+      // derived from the restored band rather than kept in two places that
+      // could disagree.
+      this.selectedBucket.set(this.store.outlierBand());
+    });
+
+    // ...then keep the URL in step, replacing rather than pushing so the
+    // back button leaves the screen instead of walking through every change.
+    effect(() => {
+      const queryParams = this.store.toQueryParams();
+      void this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
+    });
+  }
 
   protected summaryData() {
     const state = this.store.summary();
