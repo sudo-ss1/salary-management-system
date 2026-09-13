@@ -2,7 +2,6 @@ package com.payscope.employee;
 
 import com.payscope.support.FixedClockConfig;
 import com.payscope.support.IntegrationTest;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -104,7 +103,6 @@ class EmployeeDetailApiTest {
     }
 
     @Test
-    @Disabled("enabled by Task 11")
     void returns_not_found_rather_than_gone_for_a_soft_deleted_employee() throws Exception {
         long id = create("E-3006", "d6@acme.test", "3712500.00", "INR", "IN", "SOFTWARE_ENGINEER", "SENIOR");
         mvc.perform(delete("/api/employees/{id}", id));

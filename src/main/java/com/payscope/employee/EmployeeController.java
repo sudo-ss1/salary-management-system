@@ -5,6 +5,7 @@ import com.payscope.employee.dto.EmployeeDetailResponse;
 import com.payscope.employee.dto.UpdateEmployeeRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,5 +40,16 @@ public class EmployeeController {
     @PutMapping("/{id}")
     EmployeeDetailResponse update(@PathVariable Long id, @Valid @RequestBody UpdateEmployeeRequest request) {
         return service.update(id, request);
+    }
+
+    @PostMapping("/{id}/deactivate")
+    EmployeeDetailResponse deactivate(@PathVariable Long id) {
+        return service.deactivate(id);
+    }
+
+    @DeleteMapping("/{id}")
+    ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.softDelete(id);
+        return ResponseEntity.noContent().build();
     }
 }

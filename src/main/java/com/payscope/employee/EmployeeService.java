@@ -123,4 +123,31 @@ public class EmployeeService {
 
         return detail(id);
     }
+
+    /**
+     * The person left the company. The record stays visible and keeps counting
+     * in analytics, because last year's payroll legitimately includes leavers.
+     * Idempotent, and takes no version: this is a transition to a fixed target
+     * state, not a read-modify-write, so there is no lost update to prevent.
+     */
+    @Transactional
+    public EmployeeDetailResponse deactivate(Long id) {
+        Employee employee = employees.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("No employee with id " + id));
+        employee.deactivate();
+        employees.saveAndFlush(employee);
+        return detail(id);
+    }
+
+    /**
+     * The record should not exist. Idempotent: deleting an already-deleted or
+     * never-existing id succeeds, because the end state is what was asked for.
+     */
+    @Transactional
+    public void softDelete(Long id) {
+        employees.findByIdAndDeletedAtIsNull(id).ifPresent(employee -> {
+            employee.softDelete(clock.instant());
+            employees.saveAndFlush(employee);
+        });
+    }
 }
