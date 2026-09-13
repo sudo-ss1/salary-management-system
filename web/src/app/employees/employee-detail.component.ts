@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,6 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { DEPARTMENTS, EMPLOYMENT_TYPES, LEVELS, ROLES, titleCase } from '../shared/reference';
 import { SalaryHistoryComponent } from './salary-history.component';
 import { RecordRaiseDialogComponent } from './record-raise-dialog.component';
@@ -99,7 +100,9 @@ import { EmployeeDetail } from './employee.models';
             <div class="actions">
               <button mat-flat-button [disabled]="store.saving()" (click)="onSave()">Save</button>
               <button mat-stroked-button [disabled]="store.saving()"
-                      (click)="store.deactivate(+id())">Deactivate</button>
+                      (click)="confirmDeactivate(person)">Deactivate</button>
+              <button mat-stroked-button color="warn" [disabled]="store.saving()"
+                      (click)="confirmDelete(person)">Delete</button>
             </div>
           </mat-card>
 
@@ -149,6 +152,7 @@ export class EmployeeDetailComponent {
 
   protected readonly store = inject(EmployeeDetailStore);
   private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
   protected readonly departments = DEPARTMENTS;
   protected readonly roles = ROLES;
   protected readonly levels = LEVELS;
@@ -188,6 +192,37 @@ export class EmployeeDetailComponent {
       return;
     }
     this.store.save(+this.id(), { ...this.form, employeeVersion: person.employeeVersion });
+  }
+
+  protected confirmDeactivate(person: EmployeeDetail): void {
+    this.openConfirm({
+      title: `Deactivate ${person.fullName}?`,
+      message: `${person.fullName} will stay in the system and keep appearing in employee lists - `
+        + 'only their employment status will change to inactive.',
+      confirmLabel: 'Deactivate',
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.store.deactivate(+this.id());
+      }
+    });
+  }
+
+  protected confirmDelete(person: EmployeeDetail): void {
+    this.openConfirm({
+      title: `Delete ${person.fullName}?`,
+      message: `${person.fullName} will be removed from employee lists and reports. `
+        + 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.store.remove(+this.id(), () => void this.router.navigate(['/employees']));
+      }
+    });
+  }
+
+  private openConfirm(data: ConfirmDialogData) {
+    return this.dialog.open(ConfirmDialogComponent, { data }).afterClosed();
   }
 
   protected openRaiseDialog(person: EmployeeDetail): void {
