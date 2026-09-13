@@ -10,6 +10,7 @@ import { take } from 'rxjs';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { SORT_OPTIONS, titleCase } from '../shared/reference';
+import { isOutOfBand } from '../shared/compa-ratio-bands';
 import { FilterBarComponent, FilterChange } from './filter-bar.component';
 import { EmployeeListStore } from './employee-list.store';
 import { EmployeeSort, SortDirection } from './employee.models';
@@ -152,11 +153,7 @@ export class EmployeeListComponent {
     };
   }
 
-  /** A ratio is a decimal string; comparing as a number here is display logic, not money maths. */
-  protected outOfBand(compaRatio: string): boolean {
-    const value = Number(compaRatio);
-    return value < 0.8 || value > 1.2;
-  }
+  protected readonly outOfBand = isOutOfBand;
 
   protected onSearch(event: Event): void {
     this.store.setSearch((event.target as HTMLInputElement).value);
