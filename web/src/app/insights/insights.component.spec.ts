@@ -28,10 +28,9 @@ describe('InsightsComponent', () => {
 
   /**
    * InsightsStore fires all three of its requests as soon as it is
-   * constructed. Flushed here and not touched again - none of the tests
-   * below call detectChanges() afterwards, so no follow-up request (e.g. the
-   * outlier band request a bucket selection would trigger) is ever issued,
-   * and mock.verify() has nothing left over to complain about.
+   * constructed. Flushed here so mock.verify() has nothing outstanding;
+   * a test that goes on to call detectChanges() again (e.g. after a bucket
+   * selection) is responsible for flushing whatever that triggers too.
    */
   function createAndFlush() {
     const fixture = TestBed.createComponent(InsightsComponent);
@@ -49,15 +48,29 @@ describe('InsightsComponent', () => {
     return fixture;
   }
 
-  it('toggles a bucket selection off when the same bar is selected again', fakeAsync(() => {
+  it('clears the outlier band and re-requests the unfiltered list when the same bar is toggled off', fakeAsync(() => {
     const fixture = createAndFlush();
     const instance = fixture.componentInstance;
 
+    // Selecting a bar flows down to OutlierTableComponent's input, which
+    // asks the store to narrow the outlier list - proving the toggle by
+    // itself, not merely the component's own private signal.
     instance['onBucketSelected']('LT_80');
-    expect(instance['selectedBucket']()).toBe('LT_80');
+    fixture.detectChanges();
+    tick();
+
+    const filteredRequest = mock.expectOne(r => r.url === '/api/analytics/outliers');
+    expect(filteredRequest.request.params.get('band')).toBe('LT_80');
+    filteredRequest.flush({ content: [], page: 0, size: 25, totalElements: 0, totalPages: 0 });
 
     instance['onBucketSelected']('LT_80');
-    expect(instance['selectedBucket']()).toBeNull();
+    fixture.detectChanges();
+    tick();
+
+    expect(instance['store'].outlierBand()).toBeNull();
+    const clearedRequest = mock.expectOne(r => r.url === '/api/analytics/outliers');
+    expect(clearedRequest.request.params.has('band')).toBe(false);
+    clearedRequest.flush({ content: [], page: 0, size: 25, totalElements: 0, totalPages: 0 });
   }));
 
   it('replaces the selection when a different bar is selected, rather than toggling it off', fakeAsync(() => {
