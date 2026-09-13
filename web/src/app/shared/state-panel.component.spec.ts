@@ -50,5 +50,11 @@ describe('StatePanelComponent', () => {
       state: { status: 'ready', data: {} }, isEmpty: false, emptyMessage: 'unused',
     });
     expect(fixture.nativeElement.textContent.trim()).toBe('');
+
+    // Prove emptiness is conditional, not total: flip isEmpty and the message appears
+    fixture.componentRef.setInput('isEmpty', true);
+    fixture.componentRef.setInput('emptyMessage', 'No data available');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No data available');
   });
 });
