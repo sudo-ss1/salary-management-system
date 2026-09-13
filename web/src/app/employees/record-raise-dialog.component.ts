@@ -15,6 +15,14 @@ export interface RecordRaiseData {
   readonly currentEffectiveFrom: string;
 }
 
+/**
+ * Fields this dialog renders a <mat-error> for, after mapping the server's
+ * nested "salary.amount" onto the dialog's flat "amount". Any fieldErrors key
+ * outside this set has nothing to display it inline - see RENDERED_FIELDS's
+ * use in submit() below, which is what keeps such a field from vanishing.
+ */
+const RENDERED_FIELDS = new Set(['amount', 'salary.amount', 'effectiveFrom', 'changeReason']);
+
 @Component({
   selector: 'app-record-raise-dialog',
   standalone: true,
@@ -114,8 +122,17 @@ export class RecordRaiseDialogComponent {
             this.message.set(
               'This raise has already been recorded, or someone else changed the salary. Close and reload.',
             );
-          } else if (Object.keys(error.fieldErrors).length === 0) {
+            return;
+          }
+          const fieldEntries = Object.entries(error.fieldErrors);
+          const unclaimed = fieldEntries.filter(([field]) => !RENDERED_FIELDS.has(field));
+          if (fieldEntries.length === 0) {
             this.message.set(error.detail);
+          } else if (unclaimed.length > 0) {
+            // A field error nothing renders inline must still reach the
+            // user - fold it into the same message area rather than let it
+            // vanish just because fieldErrors happens to be non-empty.
+            this.message.set(unclaimed.map(([, fieldMessage]) => fieldMessage).join(' '));
           } else {
             // Each mat-error above already says what to fix; a generic
             // "one or more fields are invalid" banner on top adds nothing.
