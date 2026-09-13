@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { MatDialog } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
 import { apiErrorInterceptor } from '../core/api-error.interceptor';
 import { EmployeeDetailComponent } from './employee-detail.component';
 
@@ -82,5 +84,96 @@ describe('EmployeeDetailComponent', () => {
     harness.detectChanges();
 
     mock.expectNone('/api/employees/7/salary-history');
+  }));
+
+  function findButton(harness: RouterTestingHarness, label: string): HTMLButtonElement {
+    const button = Array.from(harness.routeNativeElement!.querySelectorAll('button')).find(
+      candidate => candidate.textContent?.includes(label),
+    );
+    if (!button) {
+      throw new Error(`No button found with label "${label}"`);
+    }
+    return button as HTMLButtonElement;
+  }
+
+  /**
+   * These three tests need a stubbed MatDialog, which the shared beforeEach
+   * above does not provide. TestBed.overrideProvider() cannot be used here -
+   * the shared beforeEach already called TestBed.inject(HttpTestingController),
+   * which instantiates the module - so the module is rebuilt from scratch
+   * with the stub included from the start.
+   */
+  function configureWithStubbedDialog(): { open: jest.Mock; afterClosed$: Subject<boolean | undefined> } {
+    const afterClosed$ = new Subject<boolean | undefined>();
+    const open = jest.fn().mockReturnValue({ afterClosed: () => afterClosed$ });
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+        provideNoopAnimations(),
+        provideRouter(
+          [{ path: 'employees/:id', component: EmployeeDetailComponent }],
+          withComponentInputBinding(),
+        ),
+        { provide: MatDialog, useValue: { open } },
+      ],
+    });
+    mock = TestBed.inject(HttpTestingController);
+
+    return { open, afterClosed$ };
+  }
+
+  it('opens the raise dialog from the pay card with data mapped from the record', fakeAsync(async () => {
+    const { open } = configureWithStubbedDialog();
+
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+    harness.detectChanges();
+
+    findButton(harness, 'Record a raise').click();
+    harness.detectChanges();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    const config = open.mock.calls[0][1];
+    expect(config.data).toEqual({
+      employeeId: 7, currency: 'INR', salaryVersion: 0, currentEffectiveFrom: '2024-03-01',
+    });
+  }));
+
+  it('reloads the record when the raise dialog closes with true', fakeAsync(async () => {
+    const { afterClosed$ } = configureWithStubbedDialog();
+
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+    harness.detectChanges();
+
+    findButton(harness, 'Record a raise').click();
+    harness.detectChanges();
+
+    afterClosed$.next(true);
+    tick();
+
+    // load() re-issues a fresh request for the same id - expectOne itself
+    // fails if the reload never happened.
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+    harness.detectChanges();
+  }));
+
+  it('does not reload when the raise dialog is cancelled', fakeAsync(async () => {
+    const { afterClosed$ } = configureWithStubbedDialog();
+
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+    harness.detectChanges();
+
+    findButton(harness, 'Record a raise').click();
+    harness.detectChanges();
+
+    afterClosed$.next(undefined);
+    tick();
+
+    mock.expectNone('/api/employees/7');
   }));
 });

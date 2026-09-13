@@ -53,9 +53,30 @@ describe('RecordRaiseDialogComponent', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
     // The server rejects a mismatch, so offering a choice would only invite a
-    // 400 the user cannot act on.
-    expect(fixture.nativeElement.textContent).toContain('INR');
+    // 400 the user cannot act on. This checks INR labels the amount field
+    // itself - not merely that the string appears somewhere in the dialog,
+    // which would pass even if the amount input didn't exist at all.
+    const amountField: HTMLInputElement | null =
+      fixture.nativeElement.querySelector('input[inputmode="decimal"]');
+    expect(amountField).not.toBeNull();
+    const formField = amountField!.closest('mat-form-field');
+    expect(formField!.textContent).toContain('INR');
     expect(fixture.nativeElement.querySelector('mat-select')).toBeNull();
+  });
+
+  it('omits changeReason from the request body when left blank', () => {
+    const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+                                       changeReason: '' };
+
+    fixture.componentInstance.submit();
+
+    const request = mock.expectOne('/api/employees/7/salary');
+    // The key can still be present with an undefined value in memory; what
+    // matters is that it is gone once the body is actually serialized.
+    expect(JSON.stringify(request.request.body)).not.toContain('changeReason');
+    request.flush({});
   });
 
   it('closes and reports success once the raise is recorded', () => {
