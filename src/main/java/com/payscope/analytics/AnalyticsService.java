@@ -32,13 +32,13 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
-    public PagedResponse<OutlierItem> outliers(AnalyticsFilter filter, int page, int size) {
+    public PagedResponse<OutlierItem> outliers(AnalyticsFilter filter, OutlierBand band, int page, int size) {
         if (page < 0) {
             throw new DomainException("Page must not be negative");
         }
         if (size < 1 || size > MAX_PAGE_SIZE) {
             throw new DomainException("Page size must be between 1 and " + MAX_PAGE_SIZE + ", was " + size);
         }
-        return repository.outliers(filter, page, size);
+        return repository.outliers(filter, band, page, size);
     }
 }

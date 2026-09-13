@@ -165,24 +165,41 @@ public class AnalyticsRepository {
               and (s.amount_original / b.band_mid < :low or s.amount_original / b.band_mid > :high)
             """;
 
-    public PagedResponse<OutlierItem> outliers(AnalyticsFilter filter, int page, int size) {
+    /**
+     * A band-specific predicate binds only the one comparison it uses. Hibernate's
+     * native-query binding throws IllegalArgumentException for a named parameter
+     * that does not appear in the SQL, so bindOutlier below must bind :low and
+     * :high to match - never both, unconditionally.
+     */
+    private static String outlierPredicate(OutlierBand band) {
+        if (band == OutlierBand.LT_80) {
+            return "  and b.band_mid is not null and s.amount_original / b.band_mid < :low\n";
+        }
+        if (band == OutlierBand.GT_120) {
+            return "  and b.band_mid is not null and s.amount_original / b.band_mid > :high\n";
+        }
+        return OUTLIER_PREDICATE;
+    }
+
+    public PagedResponse<OutlierItem> outliers(AnalyticsFilter filter, OutlierBand band, int page, int size) {
+        String predicate = outlierPredicate(band);
         String sql = """
                 select e.id, e.employee_number, e.full_name, e.country_code, e.job_role, e.job_level,
                        s.amount_original, s.currency_code, b.band_mid,
                        round(s.amount_original / b.band_mid, 4) as compa_ratio
-                """ + FROM_AND_WHERE + OUTLIER_PREDICATE + """
+                """ + FROM_AND_WHERE + predicate + """
                 order by compa_ratio asc, e.id asc
                 limit :size offset :offset
                 """;
 
         @SuppressWarnings("unchecked")
-        List<Tuple> rows = bindOutlier(em.createNativeQuery(sql, Tuple.class), filter)
+        List<Tuple> rows = bindOutlier(em.createNativeQuery(sql, Tuple.class), filter, band)
                 .setParameter("size", size)
                 .setParameter("offset", page * size)
                 .getResultList();
 
         Number total = (Number) bindOutlier(
-                em.createNativeQuery("select count(*) " + FROM_AND_WHERE + OUTLIER_PREDICATE), filter)
+                em.createNativeQuery("select count(*) " + FROM_AND_WHERE + predicate), filter, band)
                 .getSingleResult();
 
         List<OutlierItem> content = rows.stream().map(row -> new OutlierItem(
@@ -204,9 +221,20 @@ public class AnalyticsRepository {
         return PagedResponse.of(content, page, size, total.longValue());
     }
 
-    private Query bindOutlier(Query query, AnalyticsFilter filter) {
-        return bind(query, filter)
-                .setParameter("low", CompaRatio.LOW)
-                .setParameter("high", CompaRatio.HIGH);
+    /**
+     * Band-aware: a band-specific predicate names only one of :low / :high, and
+     * Hibernate throws IllegalArgumentException on a native query if asked to
+     * bind a name the SQL does not contain. Binding both only when no band is
+     * given keeps the existing unbanded path - and its tests - unchanged.
+     */
+    private Query bindOutlier(Query query, AnalyticsFilter filter, OutlierBand band) {
+        query = bind(query, filter);
+        if (band == OutlierBand.LT_80) {
+            return query.setParameter("low", CompaRatio.LOW);
+        }
+        if (band == OutlierBand.GT_120) {
+            return query.setParameter("high", CompaRatio.HIGH);
+        }
+        return query.setParameter("low", CompaRatio.LOW).setParameter("high", CompaRatio.HIGH);
     }
 }

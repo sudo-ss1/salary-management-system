@@ -51,8 +51,10 @@ public class AnalyticsController {
                                         @RequestParam(required = false) Role role,
                                         @RequestParam(required = false) Level level,
                                         @RequestParam(required = false) EmployeeStatus status,
+                                        @RequestParam(required = false) String band,
                                         @RequestParam(defaultValue = "0") int page,
                                         @RequestParam(defaultValue = "25") int size) {
-        return service.outliers(new AnalyticsFilter(country, department, role, level, status), page, size);
+        return service.outliers(new AnalyticsFilter(country, department, role, level, status),
+                OutlierBand.parse(band), page, size);
     }
 }
