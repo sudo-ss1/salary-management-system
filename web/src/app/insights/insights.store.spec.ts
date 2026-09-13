@@ -74,7 +74,12 @@ describe('InsightsStore', () => {
     const request = mock.expectOne(r => r.url === '/api/analytics/distribution');
     expect(request.request.params.getAll('groupBy')).toEqual(['COUNTRY']);
     request.flush([]);
-    mock.match(() => true).forEach(r => r.flush(SUMMARY));
+    // Each remaining request flushed with its own correctly-shaped fixture,
+    // not swept up by a blanket match() that would hand the outliers request
+    // a summary-shaped body.
+    mock.expectOne(r => r.url === '/api/analytics/summary').flush(SUMMARY);
+    mock.expectOne(r => r.url === '/api/analytics/outliers').flush(
+      { content: [], page: 0, size: 25, totalElements: 0, totalPages: 0 });
   }));
 
   it('sends both dimensions when two are selected', fakeAsync(() => {
@@ -93,7 +98,10 @@ describe('InsightsStore', () => {
     settle();
     flushAll();
 
-    expect(() => store.setGroupBy(['COUNTRY', 'LEVEL', 'ROLE'] as never)).toThrow(/two/);
+    expect(() => store.setGroupBy(['COUNTRY', 'LEVEL', 'ROLE'] as never))
+      .toThrow('Group by at most two dimensions, was given 3');
+    // A cap that throws but mutates state anyway would still be a bug.
+    expect(store.groupBy()).toEqual(['COUNTRY']);
   }));
 
   it('applies one filter change to all three views at once', fakeAsync(() => {
@@ -141,5 +149,6 @@ describe('InsightsStore', () => {
 
     expect(store.summary().status).toBe('ready');
     expect(store.distribution().status).toBe('error');
+    expect(store.outliers().status).toBe('ready');
   }));
 });
