@@ -91,6 +91,19 @@ class RecordSalaryApiTest {
     }
 
     @Test
+    void labels_a_replayed_raise_as_a_stale_version_conflict() throws Exception {
+        // Same defect as ADR-0007's replay case: a client cannot tell a stale
+        // version apart from a uniqueness conflict without this label.
+        long id = create("R-003A", "r3a@acme.test");
+        mvc.perform(post("/api/employees/{id}/salary", id).contentType(APPLICATION_JSON)
+                .content(raiseBody("4640625.00", "INR", "2026-01-01", 0)));
+
+        mvc.perform(post("/api/employees/{id}/salary", id).contentType(APPLICATION_JSON)
+                        .content(raiseBody("4640625.00", "INR", "2026-01-01", 0)))
+                .andExpect(jsonPath("$.conflictKind").value("STALE_VERSION"));
+    }
+
+    @Test
     void rejects_a_raise_denominated_in_a_currency_the_country_does_not_use() throws Exception {
         long id = create("R-004", "r4@acme.test");
 

@@ -101,6 +101,17 @@ class UpdateEmployeeApiTest {
     }
 
     @Test
+    void labels_a_stale_version_conflict_so_the_client_can_show_a_reload_prompt() throws Exception {
+        long id = create("E-5004A", "u4a@acme.test");
+        mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
+                .content(updateBody("First Edit", "updated4a@acme.test", "STAFF", 0)));
+
+        mvc.perform(put("/api/employees/{id}", id).contentType(APPLICATION_JSON)
+                        .content(updateBody("Second Edit", "updated4a@acme.test", "STAFF", 0)))
+                .andExpect(jsonPath("$.conflictKind").value("STALE_VERSION"));
+    }
+
+    @Test
     void requires_a_version_on_every_update() throws Exception {
         long id = create("E-5005", "u5@acme.test");
 

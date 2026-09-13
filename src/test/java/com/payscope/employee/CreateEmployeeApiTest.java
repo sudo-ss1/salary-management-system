@@ -103,7 +103,8 @@ class CreateEmployeeApiTest {
                         .content(requestBody("E-2008", "dupe@acme.test", "3500000.00", "INR", "IN", "2024-03-01")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Conflict"))
-                .andExpect(jsonPath("$.detail").value("That email address is already in use"));
+                .andExpect(jsonPath("$.detail").value("That email address is already in use"))
+                .andExpect(jsonPath("$.conflictKind").value("UNIQUE_CONSTRAINT"));
     }
 
     @Test
