@@ -78,6 +78,30 @@ describe('EmployeeDetailComponent', () => {
     expect(banner.querySelector('button')!.textContent).toContain('Reload');
   }));
 
+  it('shows the full name validation error inline instead of failing silently', fakeAsync(async () => {
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+    harness.detectChanges();
+
+    harness.routeDebugElement!.componentInstance.onSave();
+    mock.expectOne(r => r.method === 'PUT').flush(
+      {
+        title: 'Bad Request',
+        detail: 'One or more fields are invalid',
+        errors: [{ field: 'fullName', message: 'must not be blank' }],
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    harness.detectChanges();
+    tick();
+
+    // Nothing renders this today: the snackbar is suppressed because
+    // fieldErrors is non-empty, and no control binds "fullName" - so the
+    // failure must be visible somewhere in the rendered page, not merely in
+    // the store's fieldErrors() signal.
+    expect(harness.routeNativeElement!.textContent).toContain('must not be blank');
+  }));
+
   it('does not fetch the salary history until the timeline tab is opened', fakeAsync(async () => {
     const harness = await RouterTestingHarness.create('/employees/7');
     mock.expectOne('/api/employees/7').flush(DETAIL);
