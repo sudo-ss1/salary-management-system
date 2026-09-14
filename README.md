@@ -4,6 +4,11 @@ Salary management and pay insights for an HR team operating across several
 countries. See `requirements.md` for scope and `docs/superpowers/specs/` for the
 design.
 
+**Live application:** _<!-- hosted URL -->_ · **Demo video:** _<!-- link -->_
+
+Running it locally is an alternative, not the main route — everything below the
+next two sections is for reading the code rather than seeing the product.
+
 ## Prerequisites
 
 - Docker, for the composed stack and for `./mvnw test` (Testcontainers).
