@@ -63,10 +63,11 @@ a deliberate, bounded exception with its error analysis recorded
 clamped request lies to the caller about what it received.
 
 The paginator's total always comes from the server's count query against the same predicate as
-the page. This is why the outlier band filter was added to the backend rather than filtered in the
-browser: filtering a returned page would have filtered *one page* rather than the set, and the
-paginator would have reported a total that did not match the rows on screen. Verified live —
-`band=LT_80` returns `totalElements: 191`, matching the summary bucket exactly.
+the page. This is why the outlier band filter is a parameter on `GET /api/analytics/outliers` rather
+than a filter applied in the browser: filtering a returned page would have filtered *one page*
+rather than the set, and the paginator would have reported a total that did not match the rows on
+screen. Verified live — `band=LT_80` returns `totalElements: 191` and `band=GT_120` returns 199,
+matching the summary's histogram buckets exactly.
 
 Sorting uses a closed enum, never request text interpolated into SQL, with a mandatory `e.id asc`
 tiebreaker so pages cannot overlap or skip rows under equal sort keys.

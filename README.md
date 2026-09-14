@@ -45,6 +45,47 @@ doesn't publish one by default (see Troubleshooting):
     docker compose run --rm -p 5432:5432 db
     ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
+## Deploy it
+
+`deploy/Dockerfile` builds the whole application as **one image** — the Angular
+bundle and the Spring Boot jar together, with nginx in front of both. It needs
+nothing but a Postgres connection string and works unchanged on Render, Fly.io,
+Railway, App Runner or any container host.
+
+    docker build -f deploy/Dockerfile -t payscope .
+    docker run -p 10000:10000 \
+      -e PORT=10000 \
+      -e DATABASE_URL='postgres://user:password@host:5432/payscope' \
+      payscope
+
+Two variables, both optional in the sense that the platform usually sets them:
+
+| Variable | Meaning |
+|---|---|
+| `PORT` | The port nginx listens on. Injected by every managed platform; defaults to 8000. |
+| `DATABASE_URL` | Standard libpq URL. Split into the three `SPRING_DATASOURCE_*` properties by `deploy/entrypoint.sh`; set those directly instead and they win. |
+
+Schema migration (Flyway) and the 10,000-employee seed both run on boot. Seeding
+is idempotent under `pg_advisory_xact_lock`, so a restart, a redeploy or a second
+instance cannot double-seed. Budget **30–60 seconds** for a cold start: Flyway,
+then the seed, then the first request.
+
+**Why one image, when `docker compose up` runs three services?** Because they
+answer different questions. The composed stack is the honest architecture —
+separate web, API and database processes, which is how this would actually run.
+The single image exists so a reviewer can open a link: free hosting tiers give
+you one container and one port, and paying for three services to demonstrate a
+salary tool is the wrong trade. The application code is identical; only the
+process topology differs, and `deploy/nginx.conf` proxies `/api` to loopback
+where `web/nginx.conf` proxies it across the compose network. The SPA calls
+`/api` on its own origin either way, so no API host is ever baked into the
+bundle and there is no CORS configuration in this project at all.
+
+Verified end to end before publishing: built from a clean context, run against a
+throwaway Postgres with a non-default `PORT` and a password supplied only via
+`DATABASE_URL`, then checked for a seeded summary, a paged employee list, the
+SPA at `/`, and a deep link at `/employees/10001` falling back to `index.html`.
+
 ## How this was built
 
 Design preceded code, and the reasoning is committed alongside it.

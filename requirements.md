@@ -73,11 +73,14 @@ no FX involved, and 0.72 means the same thing in Bengaluru as in London. A raw
 salary comparison across countries cannot make that statement.
 
 **"Then show me those people."**
-→ **Outliers.** The below-80% and above-120% histogram bands are clickable and
-cross-filter the employee list to exactly those individuals. Analysis that ends
-at a chart gets screenshotted; analysis that ends at a named, editable record
-gets acted on. This is why the band filter is a backend query parameter rather
-than a client-side filter over one page — see `docs/performance.md`.
+→ **Outliers.** The below-80% and above-120% histogram bands are clickable, and
+selecting one fills a table beneath the chart with exactly those individuals —
+191 and 199 of them respectively, matching the histogram buckets — each row
+linking straight to that person's editable record. Analysis that ends at a chart
+gets screenshotted; analysis that ends at a named record gets acted on. The band
+is a backend query parameter rather than a client-side filter over one page,
+because filtering a returned page would filter *one page* and leave the count
+disagreeing with the rows — see `docs/performance.md`.
 
 Every report honours the same four filters (country, department, level, status),
 because the questions above are almost never asked about the whole org — they are
