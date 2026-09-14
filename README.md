@@ -57,6 +57,7 @@ Design preceded code, and the reasoning is committed alongside it.
 | [`docs/adr/`](docs/adr/) | Nine decision records, one decision each, with consequences |
 | [`docs/performance.md`](docs/performance.md) | N+1 prevention, SQL aggregation, pagination, write throughput, bundle size |
 | [`docs/ai-process.md`](docs/ai-process.md) | How AI tools were used, what the reviews caught, and what the method missed |
+| [`docs/ai-prompts.md`](docs/ai-prompts.md) | The prompts and configuration themselves, and the corrections that changed the build |
 | [`docs/superpowers/plans/`](docs/superpowers/plans/) | The implementation plans, task by task |
 | [`docs/superpowers/2026-09-13-frontend-followups.md`](docs/superpowers/2026-09-13-frontend-followups.md) | Everything knowingly not done, with reasoning (backend counterpart alongside) |
 

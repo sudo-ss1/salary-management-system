@@ -1,7 +1,8 @@
 # How this was built with AI
 
 A record of method and outcomes, including where the method failed. `Claude.md` holds the
-standing instructions the agents worked under; this describes what was actually done with them.
+standing instructions the agents worked under, and [`ai-prompts.md`](ai-prompts.md) reproduces the
+prompts themselves; this describes what was actually done with them.
 
 ---
 
@@ -38,8 +39,8 @@ passes.
 
 | | Backend | Frontend |
 |---|---|---|
-| Commits | 61 | 97 |
-| Tests | 162 | 163 |
+| Commits | 61 | 101 |
+| Tests | 162 | 158 |
 | Reviews | per-task + final | per-task + final |
 
 Tests are integration-first: the backend runs against real PostgreSQL via Testcontainers, never
