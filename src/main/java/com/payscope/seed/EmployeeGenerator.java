@@ -25,12 +25,49 @@ public class EmployeeGenerator {
                                     EmployeeStatus status, double bandFactor, int raiseCount) {
     }
 
+    // A ~10,000-person organisation needs enough name combinations that duplicates are
+    // occasional rather than systematic. The previous 20x20 pool gave 400 combinations for
+    // 10,000 people - about 25 copies of every name, which sorted by name produced visible
+    // runs of identical rows and made the seed look broken. These pools give ~21,000
+    // combinations, so a duplicate is realistic rather than constant.
     private static final String[] GIVEN_NAMES = {
-            "Asha", "Ben", "Chen", "Dana", "Ekaterina", "Farid", "Grace", "Hiro", "Ines", "Jonas",
-            "Kavya", "Lucas", "Mei", "Nadia", "Omar", "Priya", "Quentin", "Rosa", "Sven", "Tara"};
+            "Aarav", "Abena", "Adam", "Adanna", "Adrian", "Agnieszka", "Ahmed", "Aiko", "Ajay",
+            "Alejandro", "Alice", "Amara", "Amelia", "Ana", "Anders", "Andrea", "Aneta", "Anika",
+            "Anton", "Arjun", "Asha", "Astrid", "Ayesha", "Beatriz", "Ben", "Bianca", "Bilal",
+            "Bruno", "Camila", "Carlos", "Caroline", "Catarina", "Chen", "Chiara", "Chloe",
+            "Daniel", "Dana", "Darius", "David", "Deepa", "Diego", "Dmitri", "Ekaterina", "Elena",
+            "Eli", "Emeka", "Emma", "Enzo", "Erik", "Esther", "Fabio", "Farid", "Fatima", "Felix",
+            "Fernanda", "Finn", "Florence", "Gabriel", "Georgia", "Grace", "Gustavo", "Hana",
+            "Hannah", "Harpreet", "Hassan", "Henrik", "Hiro", "Ibrahim", "Ingrid", "Ines",
+            "Isabel", "Ivan", "Jamal", "James", "Javier", "Jin", "Joana", "Johan", "Jonas",
+            "Julia", "Kai", "Karan", "Kavya", "Keiko", "Khalid", "Klara", "Lars", "Laura", "Leila",
+            "Leo", "Liam", "Lin", "Lucas", "Lucia", "Mads", "Maria", "Mariam", "Marta", "Mateo",
+            "Mei", "Mika", "Minh", "Miriam", "Mohan", "Nadia", "Naomi", "Natalia", "Neha", "Niels",
+            "Nikhil", "Nina", "Noor", "Olga", "Oliver", "Omar", "Paulo", "Pedro", "Petra", "Priya",
+            "Rafael", "Rahul", "Rania", "Ravi", "Rebecca", "Renata", "Ricardo", "Rosa", "Ruth",
+            "Sanjay", "Sara", "Sebastian", "Selin", "Shreya", "Simone", "Sofia", "Sonia", "Stefan",
+            "Sven", "Tara", "Thomas", "Tobias", "Valentina", "Vikram", "Wei", "Yara", "Yuki",
+            "Zara", "Zoe"};
     private static final String[] FAMILY_NAMES = {
-            "Menon", "Carter", "Wei", "Silva", "Novak", "Haddad", "Okonkwo", "Tanaka", "Duarte", "Berg",
-            "Iyer", "Moreau", "Zhang", "Rahman", "Costa", "Nilsson", "Ferrari", "Lopez", "Adebayo", "Kaur"};
+            "Abebe", "Acosta", "Adebayo", "Agarwal", "Ahmed", "Almeida", "Andersson", "Araujo",
+            "Arnold", "Bakker", "Banerjee", "Barros", "Becker", "Bennett", "Berg", "Bergmann",
+            "Bhat", "Blanco", "Braun", "Cardoso", "Carter", "Castro", "Chandra", "Chatterjee",
+            "Chaudhry", "Chen", "Choi", "Clarke", "Costa", "Cruz", "Dalton", "Das", "Delgado",
+            "Desai", "Dubois", "Duarte", "Eriksson", "Esposito", "Farrell", "Fernandes", "Ferrari",
+            "Fischer", "Fonseca", "Freeman", "Gallagher", "Garcia", "Ghosh", "Gomes", "Gonzalez",
+            "Grant", "Greco", "Gupta", "Haddad", "Hall", "Hansen", "Hartmann", "Hassan",
+            "Hoffmann", "Holmes", "Hussain", "Ibrahim", "Iyer", "Jackson", "Jain", "Jensen",
+            "Johansson", "Jones", "Joshi", "Kapoor", "Kaur", "Keller", "Khan", "Kim", "Klein",
+            "Koch", "Kowalski", "Krishnan", "Kumar", "Lambert", "Larsen", "Lawson", "Lee", "Lima",
+            "Lindqvist", "Lopez", "Lund", "Macedo", "Mahmood", "Malhotra", "Marsh", "Martins",
+            "Mehta", "Melo", "Mendes", "Menon", "Meyer", "Mitchell", "Moreau", "Morris", "Muller",
+            "Nair", "Nakamura", "Navarro", "Neumann", "Nguyen", "Nilsson", "Novak", "Nunes", "Obi",
+            "Okonkwo", "Oliveira", "Olsen", "Ortiz", "Pandey", "Park", "Patel", "Pereira",
+            "Peters", "Petrov", "Pinto", "Rahman", "Ramirez", "Ramos", "Rao", "Reddy", "Ribeiro",
+            "Richardson", "Rocha", "Rodrigues", "Rossi", "Saito", "Santos", "Schneider", "Sharma",
+            "Shetty", "Silva", "Singh", "Sinha", "Sousa", "Stewart", "Suzuki", "Tanaka", "Tavares",
+            "Thomas", "Vargas", "Verma", "Wagner", "Walsh", "Wei", "Weber", "Williams", "Wong",
+            "Yadav", "Yamamoto", "Zhang", "Zhao"};
 
     /** country code, weight */
     private static final Object[][] COUNTRIES = {
