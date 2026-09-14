@@ -97,9 +97,15 @@ before `.distinct()`.
   record. Refilling after a save is required; suppressing it for the other two paths needs care, and
   a confirmation step on Deactivate would address the same risk more simply.
 
-## Soft delete has no UI
+## Soft delete stays backend-only, by decision
 
-`EmployeeDetailStore.remove()` calls `DELETE /employees/{id}`, which the backend implements as a
-soft delete with `deleted_at` and partial unique indexes (ADR-0005), fully tested. The detail screen
-offers Save and Deactivate only — the approved frontend plan contains no delete flow, so wiring one
-means designing a confirmation step no task specifies. Raised with the author rather than invented.
+The detail screen briefly offered Deactivate and Delete side by side. Requirements §3 lists the
+record operations as create, read, update, deactivate — delete is not among them, and the two
+buttons asked a non-technical HR manager to arbitrate "no longer employed" versus "this record
+should not exist", a distinction the data model needs and the user does not. Delete is removed from
+the client: `confirmDelete`, `EmployeeDetailStore.remove()` and `EmployeeApiService.remove()` are
+gone.
+
+The backend keeps soft delete untouched — `DELETE /employees/{id}`, `deleted_at`, the partial unique
+indexes, ADR-0005, and its tests all stand. It remains a capability the API has that the client
+deliberately does not surface.

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -150,13 +150,19 @@ import { EmployeeDetail } from './employee.models';
               </mat-form-field>
             </div>
 
+            <!--
+              Deactivate is the only record-lifecycle action offered here.
+              The API also supports a soft delete, but requirements section 3
+              lists "create, read, update, deactivate" - and offering both at
+              once asks a non-technical user to choose between "no longer
+              employed" and "this record should not exist", a distinction the
+              data model needs and they do not.
+            -->
             <div class="actions">
               <button mat-flat-button [disabled]="store.saving()" (click)="onSave()">Save</button>
               <span class="actions__spacer"></span>
               <button mat-stroked-button [disabled]="store.saving()"
                       (click)="confirmDeactivate(person)">Deactivate</button>
-              <button mat-stroked-button color="warn" [disabled]="store.saving()"
-                      (click)="confirmDelete(person)">Delete</button>
             </div>
           </section>
         </mat-tab>
@@ -247,7 +253,6 @@ export class EmployeeDetailComponent {
 
   protected readonly store = inject(EmployeeDetailStore);
   private readonly dialog = inject(MatDialog);
-  private readonly router = inject(Router);
   protected readonly departments = DEPARTMENTS;
   protected readonly roles = ROLES;
   protected readonly levels = LEVELS;
@@ -299,20 +304,6 @@ export class EmployeeDetailComponent {
     }).subscribe(confirmed => {
       if (confirmed) {
         this.store.deactivate(+this.id());
-      }
-    });
-  }
-
-  protected confirmDelete(person: EmployeeDetail): void {
-    this.openConfirm({
-      title: `Delete ${person.fullName}?`,
-      message: `${person.fullName} will be removed from employee lists and reports. `
-        + 'This cannot be undone.',
-      confirmLabel: 'Delete',
-      destructive: true,
-    }).subscribe(confirmed => {
-      if (confirmed) {
-        this.store.remove(+this.id(), () => void this.router.navigate(['/employees']));
       }
     });
   }

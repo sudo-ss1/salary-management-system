@@ -105,26 +105,6 @@ export class EmployeeDetailStore {
     });
   }
 
-  /**
-   * onSuccess lets the component navigate away once the delete has actually
-   * landed - it is invoked only if this id is still the one on screen, the
-   * same guard every other write in this store applies.
-   */
-  remove(id: number, onSuccess?: () => void): void {
-    this.saving.set(true);
-    this.api.remove(id).subscribe({
-      next: () => {
-        if (this.activeId !== id) {
-          return;
-        }
-        this.saving.set(false);
-        this.notifications.notify('Employee deleted');
-        onSuccess?.();
-      },
-      error: (error: ApiError) => this.onWriteFailed(id, error),
-    });
-  }
-
   private onWriteFailed(id: number, error: ApiError): void {
     if (this.activeId !== id) {
       // A validation error, conflict or notification for an employee that is

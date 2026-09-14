@@ -60,10 +60,6 @@ export class EmployeeApiService {
     return this.http.post<EmployeeDetail>(`/api/employees/${id}/deactivate`, {});
   }
 
-  remove(id: number): Observable<void> {
-    return this.http.delete<void>(`/api/employees/${id}`);
-  }
-
   salaryHistory(id: number): Observable<SalaryHistoryItem[]> {
     return this.http.get<SalaryHistoryItem[]>(`/api/employees/${id}/salary-history`);
   }

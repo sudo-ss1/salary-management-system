@@ -1,18 +1,13 @@
-import { Component } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject } from 'rxjs';
 import { apiErrorInterceptor } from '../core/api-error.interceptor';
 import { EmployeeDetailComponent } from './employee-detail.component';
-
-/** Stands in for the real employees list route, so navigate(['/employees']) has somewhere to land. */
-@Component({ selector: 'app-employees-list-stub', standalone: true, template: 'employees list' })
-class EmployeesListStubComponent {}
 
 const DETAIL = {
   id: 7, employeeNumber: 'E-007', fullName: 'Asha Menon', email: 'asha@acme.test',
@@ -159,7 +154,6 @@ describe('EmployeeDetailComponent', () => {
         provideRouter(
           [
             { path: 'employees/:id', component: EmployeeDetailComponent },
-            { path: 'employees', component: EmployeesListStubComponent },
           ],
           withComponentInputBinding(),
         ),
@@ -263,69 +257,12 @@ describe('EmployeeDetailComponent', () => {
     harness.detectChanges();
   }));
 
-  it('does not delete when the confirmation is cancelled', fakeAsync(async () => {
-    const { afterClosed$ } = configureWithStubbedDialog();
-
-    const harness = await RouterTestingHarness.create('/employees/7');
-    mock.expectOne('/api/employees/7').flush(DETAIL);
-    harness.detectChanges();
-
-    findButton(harness, 'Delete').click();
-    harness.detectChanges();
-
-    afterClosed$.next(undefined);
-    tick();
-
-    // Sibling test below proves confirming does issue the DELETE, so this
-    // cannot pass merely because the component never wires up delete at all.
-    mock.expectNone(request => request.method === 'DELETE');
-  }));
-
-  it('deletes and returns to the employee list once the confirmation is accepted', fakeAsync(async () => {
-    const { afterClosed$ } = configureWithStubbedDialog();
-    const router = TestBed.inject(Router);
-
-    const harness = await RouterTestingHarness.create('/employees/7');
-    mock.expectOne('/api/employees/7').flush(DETAIL);
-    harness.detectChanges();
-
-    findButton(harness, 'Delete').click();
-    harness.detectChanges();
-
-    afterClosed$.next(true);
-    tick();
-
-    const request = mock.expectOne(req => req.method === 'DELETE' && req.url === '/api/employees/7');
-    request.flush(null);
-    tick();
-
-    // Staying on the detail page of a record that no longer appears anywhere
-    // is disorienting - the whole point of navigating away on success.
-    expect(router.url).toBe('/employees');
-  }));
-
   it('names the employee in the deactivate confirmation instead of asking generically', fakeAsync(async () => {
     const harness = await RouterTestingHarness.create('/employees/7');
     mock.expectOne('/api/employees/7').flush(DETAIL);
     harness.detectChanges();
 
     findButton(harness, 'Deactivate').click();
-    harness.detectChanges();
-    tick();
-
-    const dialogText = document.querySelector('mat-dialog-content')!.textContent;
-    expect(dialogText).toContain('Asha Menon');
-
-    TestBed.inject(MatDialog).closeAll();
-    tick();
-  }));
-
-  it('names the employee in the delete confirmation instead of asking generically', fakeAsync(async () => {
-    const harness = await RouterTestingHarness.create('/employees/7');
-    mock.expectOne('/api/employees/7').flush(DETAIL);
-    harness.detectChanges();
-
-    findButton(harness, 'Delete').click();
     harness.detectChanges();
     tick();
 
