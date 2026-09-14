@@ -24,15 +24,24 @@ export interface ChartPoint {
   template: `
     <h2>Median pay by group</h2>
     <p class="note">In USD, so groups in different currencies are comparable.</p>
-    <ngx-charts-bar-horizontal
-      [results]="series()"
-      [xAxis]="true"
-      [yAxis]="true"
-      [xAxisTickFormatting]="formatValue"
-      [roundDomains]="true"
-      [view]="[720, 360]" />
+    <div class="chart-frame">
+      <ngx-charts-bar-horizontal
+        [results]="series()"
+        [xAxis]="true"
+        [yAxis]="true"
+        [xAxisTickFormatting]="formatValue"
+        [roundDomains]="true" />
+    </div>
   `,
-  styles: [`:host { display: block; } .note { opacity: .7; font-size: .85rem; }`],
+  styles: [`
+    :host { display: block; }
+    .note { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
+
+    // No fixed [view]: ngx-charts measures this frame's box and redraws on
+    // resize, so the chart fits its card at any viewport width instead of
+    // forcing a 720px-wide scrollbar onto the page.
+    .chart-frame { width: 100%; height: 320px; }
+  `],
 })
 export class MedianPayChartComponent {
   readonly groups = input.required<ReadonlyArray<DistributionGroup>>();

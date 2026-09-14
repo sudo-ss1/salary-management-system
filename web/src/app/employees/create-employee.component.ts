@@ -44,124 +44,139 @@ const EMPTY_FORM: FormState = {
   providers: [CreateEmployeeStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a routerLink="/employees">Back to employees</a>
-    <h1>Add employee</h1>
+    <a class="back-link" routerLink="/employees">Back to employees</a>
 
-    <mat-card>
-      <mat-form-field appearance="outline">
-        <mat-label>Employee number</mat-label>
-        <input matInput [(ngModel)]="form.employeeNumber" [errorStateMatcher]="alwaysShowErrors" />
-        @if (store.fieldErrors()['employeeNumber']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+    <div class="page-header">
+      <div class="page-header__text">
+        <h1>Add employee</h1>
+        <span class="page-header__context">Creates the record and their first salary together</span>
+      </div>
+    </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Full name</mat-label>
-        <input matInput [(ngModel)]="form.fullName" [errorStateMatcher]="alwaysShowErrors" />
-        @if (store.fieldErrors()['fullName']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Email</mat-label>
-        <input matInput type="email" [(ngModel)]="form.email" [errorStateMatcher]="alwaysShowErrors" />
-        @if (store.fieldErrors()['email']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Department</mat-label>
-        <mat-select [(ngModel)]="form.department">
-          @for (option of departments; track option.value) {
-            <mat-option [value]="option.value">{{ option.label }}</mat-option>
+    <section class="surface-card form-card">
+      <h2>Identity</h2>
+      <div class="field-group">
+        <mat-form-field appearance="outline" class="field-medium">
+          <mat-label>Employee number</mat-label>
+          <input matInput [(ngModel)]="form.employeeNumber" [errorStateMatcher]="alwaysShowErrors" />
+          @if (store.fieldErrors()['employeeNumber']; as message) {
+            <mat-error>{{ message }}</mat-error>
           }
-        </mat-select>
-        @if (store.fieldErrors()['department']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Country</mat-label>
-        <mat-select [value]="countryCode()" (selectionChange)="onCountryChange($event.value)">
-          @for (option of countries; track option.value) {
-            <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        <mat-form-field appearance="outline" class="field-wide">
+          <mat-label>Full name</mat-label>
+          <input matInput [(ngModel)]="form.fullName" [errorStateMatcher]="alwaysShowErrors" />
+          @if (store.fieldErrors()['fullName']; as message) {
+            <mat-error>{{ message }}</mat-error>
           }
-        </mat-select>
-        @if (store.fieldErrors()['countryCode']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Role</mat-label>
-        <mat-select [(ngModel)]="form.role">
-          @for (option of roles; track option.value) {
-            <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        <mat-form-field appearance="outline" class="field-wide">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" [(ngModel)]="form.email" [errorStateMatcher]="alwaysShowErrors" />
+          @if (store.fieldErrors()['email']; as message) {
+            <mat-error>{{ message }}</mat-error>
           }
-        </mat-select>
-        @if (store.fieldErrors()['role']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        </mat-form-field>
+      </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Level</mat-label>
-        <mat-select [(ngModel)]="form.level">
-          @for (option of levels; track option.value) {
-            <mat-option [value]="option.value">{{ option.label }}</mat-option>
+      <h2>Role</h2>
+      <div class="field-group">
+        <mat-form-field appearance="outline" class="field-medium">
+          <mat-label>Department</mat-label>
+          <mat-select [(ngModel)]="form.department">
+            @for (option of departments; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+          @if (store.fieldErrors()['department']; as message) {
+            <mat-error>{{ message }}</mat-error>
           }
-        </mat-select>
-        @if (store.fieldErrors()['level']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Employment type</mat-label>
-        <mat-select [(ngModel)]="form.employmentType">
-          @for (option of employmentTypes; track option.value) {
-            <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        <mat-form-field appearance="outline" class="field-medium">
+          <mat-label>Country</mat-label>
+          <mat-select [value]="countryCode()" (selectionChange)="onCountryChange($event.value)">
+            @for (option of countries; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+          @if (store.fieldErrors()['countryCode']; as message) {
+            <mat-error>{{ message }}</mat-error>
           }
-        </mat-select>
-        @if (store.fieldErrors()['employmentType']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Hire date</mat-label>
-        <input matInput type="date" [(ngModel)]="form.hireDate" [errorStateMatcher]="alwaysShowErrors" />
-        <mat-hint>Cannot be in the future</mat-hint>
-        @if (store.fieldErrors()['hireDate']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        <mat-form-field appearance="outline" class="field-medium">
+          <mat-label>Role</mat-label>
+          <mat-select [(ngModel)]="form.role">
+            @for (option of roles; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+          @if (store.fieldErrors()['role']; as message) {
+            <mat-error>{{ message }}</mat-error>
+          }
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Starting salary{{ currency() ? ' in ' + currency() : '' }}</mat-label>
-        <input matInput inputmode="decimal" [(ngModel)]="form.salaryAmount"
-               [errorStateMatcher]="alwaysShowErrors" />
-        @if (currency()) {
-          <span matTextSuffix>{{ currency() }}</span>
-        }
-        @if (store.fieldErrors()['salary.amount']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        <mat-form-field appearance="outline" class="field-narrow">
+          <mat-label>Level</mat-label>
+          <mat-select [(ngModel)]="form.level">
+            @for (option of levels; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+          @if (store.fieldErrors()['level']; as message) {
+            <mat-error>{{ message }}</mat-error>
+          }
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Salary effective from</mat-label>
-        <input matInput type="date" [(ngModel)]="form.salaryEffectiveFrom"
-               [errorStateMatcher]="alwaysShowErrors" />
-        <mat-hint>On or after the hire date, and not in the future</mat-hint>
-        @if (store.fieldErrors()['salaryEffectiveFrom']; as message) {
-          <mat-error>{{ message }}</mat-error>
-        }
-      </mat-form-field>
+        <mat-form-field appearance="outline" class="field-medium">
+          <mat-label>Employment type</mat-label>
+          <mat-select [(ngModel)]="form.employmentType">
+            @for (option of employmentTypes; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+          @if (store.fieldErrors()['employmentType']; as message) {
+            <mat-error>{{ message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-narrow">
+          <mat-label>Hire date</mat-label>
+          <input matInput type="date" [(ngModel)]="form.hireDate" [errorStateMatcher]="alwaysShowErrors" />
+          <mat-hint>Not in the future</mat-hint>
+          @if (store.fieldErrors()['hireDate']; as message) {
+            <mat-error>{{ message }}</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <h2>Starting pay</h2>
+      <div class="field-group">
+        <mat-form-field appearance="outline" class="field-medium">
+          <mat-label>Starting salary{{ currency() ? ' in ' + currency() : '' }}</mat-label>
+          <input matInput inputmode="decimal" [(ngModel)]="form.salaryAmount"
+                 [errorStateMatcher]="alwaysShowErrors" />
+          @if (currency()) {
+            <span matTextSuffix>{{ currency() }}</span>
+          }
+          @if (store.fieldErrors()['salary.amount']; as message) {
+            <mat-error>{{ message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-narrow">
+          <mat-label>Effective from</mat-label>
+          <input matInput type="date" [(ngModel)]="form.salaryEffectiveFrom"
+                 [errorStateMatcher]="alwaysShowErrors" />
+          <mat-hint>On/after hire date</mat-hint>
+          @if (store.fieldErrors()['salaryEffectiveFrom']; as message) {
+            <mat-error>{{ message }}</mat-error>
+          }
+        </mat-form-field>
+      </div>
 
       <div class="actions">
         <button mat-flat-button [disabled]="store.saving() || !countryCode()" (click)="onSubmit()">
@@ -169,12 +184,31 @@ const EMPTY_FORM: FormState = {
         </button>
         <button mat-stroked-button routerLink="/employees" [disabled]="store.saving()">Cancel</button>
       </div>
-    </mat-card>
+    </section>
   `,
   styles: [`
-    mat-card { padding: 1.5rem; margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; }
-    mat-form-field { flex: 1 1 16rem; }
-    .actions { flex-basis: 100%; display: flex; gap: .75rem; }
+    .back-link { display: inline-block; margin-bottom: var(--space-4); }
+
+    .form-card { margin-top: 0; }
+    .form-card h2 { font-size: 1rem; color: var(--mat-sys-on-surface-variant); margin-bottom: var(--space-3); }
+    .form-card h2:not(:first-child) {
+      margin-top: var(--space-5);
+      padding-top: var(--space-5);
+      border-top: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .field-group { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+    .field-wide { flex: 1 1 16rem; }
+    .field-medium { flex: 1 1 12rem; }
+    .field-narrow { flex: 0 1 9rem; }
+
+    .actions {
+      display: flex;
+      gap: var(--space-3);
+      margin-top: var(--space-6);
+      padding-top: var(--space-5);
+      border-top: 1px solid var(--mat-sys-outline-variant);
+    }
   `],
 })
 export class CreateEmployeeComponent {

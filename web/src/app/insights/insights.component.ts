@@ -27,71 +27,122 @@ import { groupLabel } from '../shared/group-label';
   providers: [InsightsStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h1>Pay insights</h1>
+    <div class="page-header">
+      <div class="page-header__text">
+        <h1>Pay insights</h1>
+        <span class="page-header__context">How the organisation pays people, by group and by band</span>
+      </div>
+    </div>
 
-    <app-filter-bar [value]="store.filters()" (changed)="onFilterChange($event)" />
+    <div class="control-strip">
+      <app-filter-bar [value]="store.filters()" (changed)="onFilterChange($event)" />
+    </div>
 
     <app-state-panel [state]="store.summary()" (retry)="store.reload()" />
     @if (summaryData(); as summary) {
       <app-summary-tiles [summary]="summary" />
-      <app-compa-ratio-histogram
-        [buckets]="summary.compaRatioBuckets"
-        (bucketSelected)="onBucketSelected($event)" />
+
+      <section class="surface-card chart-card">
+        <app-compa-ratio-histogram
+          [buckets]="summary.compaRatioBuckets"
+          (bucketSelected)="onBucketSelected($event)" />
+      </section>
     }
 
-    <mat-form-field appearance="outline" class="group-by">
-      <mat-label>Group by (up to two)</mat-label>
-      <mat-select multiple [value]="store.groupBy()" (valueChange)="onGroupBy($event)">
-        @for (dimension of dimensions; track dimension) {
-          <mat-option [value]="dimension"
-                      [disabled]="isDimensionDisabled(dimension)">{{ label(dimension) }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <section class="section">
+      <div class="section__header">
+        <h2>Compare groups</h2>
+        <mat-form-field appearance="outline" class="group-by">
+          <mat-label>Group by (up to two)</mat-label>
+          <mat-select multiple [value]="store.groupBy()" (valueChange)="onGroupBy($event)">
+            @for (dimension of dimensions; track dimension) {
+              <mat-option [value]="dimension"
+                          [disabled]="isDimensionDisabled(dimension)">{{ label(dimension) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
 
-    <app-state-panel
-      [state]="store.distribution()"
-      [isEmpty]="groups().length === 0"
-      emptyMessage="No employees match these filters, so there is nothing to compare."
-      (retry)="store.reload()" />
+      <app-state-panel
+        [state]="store.distribution()"
+        [isEmpty]="groups().length === 0"
+        emptyMessage="No employees match these filters, so there is nothing to compare."
+        (retry)="store.reload()" />
 
-    @if (groups().length > 0) {
-      <app-median-pay-chart [groups]="groups()" />
+      @if (groups().length > 0) {
+        <section class="surface-card chart-card">
+          <app-median-pay-chart [groups]="groups()" />
+        </section>
 
-      <table mat-table [dataSource]="groups()">
-        <ng-container matColumnDef="group">
-          <th mat-header-cell *matHeaderCellDef>Group</th>
-          <td mat-cell *matCellDef="let row">{{ groupLabel(row) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="headcount">
-          <th mat-header-cell *matHeaderCellDef>People</th>
-          <td mat-cell *matCellDef="let row">{{ row.headcount }}</td>
-        </ng-container>
-        @for (percentile of percentiles; track percentile) {
-          <ng-container [matColumnDef]="percentile">
-            <th mat-header-cell *matHeaderCellDef>{{ percentile }}</th>
-            <td mat-cell *matCellDef="let row">{{ row[percentile] | money }}</td>
-          </ng-container>
-        }
-        <ng-container matColumnDef="medianCompaRatio">
-          <th mat-header-cell *matHeaderCellDef>Median compa-ratio</th>
-          <td mat-cell *matCellDef="let row">{{ row.medianCompaRatio ?? '—' }}</td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
-      </table>
-      <p class="note">
-        Percentiles are in USD and answer what a group costs. Median compa-ratio compares each
-        salary against its own country's band, so it is the figure to use when comparing countries.
-      </p>
-    }
+        <div class="surface-card table-card">
+          <div class="table-scroll">
+            <table mat-table [dataSource]="groups()">
+              <ng-container matColumnDef="group">
+                <th mat-header-cell *matHeaderCellDef>Group</th>
+                <td mat-cell *matCellDef="let row">{{ groupLabel(row) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="headcount">
+                <th mat-header-cell *matHeaderCellDef class="numeric-col">People</th>
+                <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row.headcount }}</td>
+              </ng-container>
+              @for (percentile of percentiles; track percentile) {
+                <ng-container [matColumnDef]="percentile">
+                  <th mat-header-cell *matHeaderCellDef class="numeric-col">{{ percentile }}</th>
+                  <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row[percentile] | money }}</td>
+                </ng-container>
+              }
+              <ng-container matColumnDef="medianCompaRatio">
+                <th mat-header-cell *matHeaderCellDef class="numeric-col">Median compa-ratio</th>
+                <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row.medianCompaRatio ?? '—' }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="columns"></tr>
+              <tr mat-row *matRowDef="let row; columns: columns"></tr>
+            </table>
+          </div>
+        </div>
+        <p class="note">
+          Percentiles are in USD and answer what a group costs. Median compa-ratio compares each
+          salary against its own country's band, so it is the figure to use when comparing countries.
+        </p>
+      }
+    </section>
 
     <app-outlier-table [selectedBucket]="selectedBucket()" />
   `,
   styles: [`
-    .group-by { min-width: 20rem; margin-top: 1.5rem; }
-    table { width: 100%; margin-top: 1rem; }
-    .note { opacity: .7; font-size: .85rem; max-width: 60rem; }
+    .section { margin-top: var(--space-6); }
+
+    .section__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    .group-by { width: 20rem; margin: 0; }
+
+    .chart-card { margin-bottom: var(--space-5); }
+
+    .table-card { padding: 0; overflow: hidden; }
+    .table-scroll { max-height: 70vh; overflow: auto; }
+    table { width: 100%; }
+
+    th.mat-mdc-header-cell {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--mat-sys-surface-container-low);
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    tr.mat-mdc-row:hover { background: var(--mat-sys-surface-container); }
+    tr.mat-mdc-row td { border-bottom-color: var(--mat-sys-outline-variant); }
+
+    .numeric-col { text-align: right; }
+
+    .note { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); max-width: 60rem; margin-top: var(--space-3); }
   `],
 })
 export class InsightsComponent {

@@ -1,1 +1,193 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+// Angular Material ships components with structural CSS only. Without a theme
+// there is no typography, no colour, no elevation and no overlay styling - the
+// app renders in the browser's serif default with black form outlines and
+// select panels that overlap the page. This file is what makes it a design.
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$cyan-palette,
+    ),
+    typography: Roboto,
+    // -1 tightens rows and form fields a step. This screen is read all day
+    // against 10,000 rows; default density wastes vertical space.
+    density: -1,
+  ));
+
+  color-scheme: light;
+}
+
+:root {
+  --page-max: 1400px;
+  --gutter: 1.5rem;
+
+  // One 8px scale. Every gap, margin and padding in the app is one of these,
+  // so the vertical and horizontal rhythm reads as deliberate rather than
+  // arbitrary.
+  --space-1: 0.25rem; // 4px
+  --space-2: 0.5rem;  // 8px
+  --space-3: 0.75rem; // 12px
+  --space-4: 1rem;    // 16px
+  --space-5: 1.5rem;  // 24px
+  --space-6: 2rem;    // 32px
+  --space-7: 3rem;    // 48px
+
+  // Compa-ratio and salary columns are scanned down, not read across, so every
+  // figure uses tabular numerals to keep digits in vertical alignment.
+  --numeric: 'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  // The page ground sits a step below the cards on it, so content reads as
+  // surfaces placed on a background rather than everything floating at the
+  // same level.
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  -webkit-font-smoothing: antialiased;
+}
+
+// Money, compa-ratios and counts line up column-wise.
+.numeric {
+  font-family: var(--numeric);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+// --- Shared page-level layout --------------------------------------------
+//
+// Every screen (employee list, insights, employee detail, create employee)
+// repeats the same skeleton: a title, a one-line secondary giving context,
+// and a right-aligned primary action, on one row. Centralising it here is
+// what keeps the pattern identical rather than reinvented per screen.
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  &__context {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-medium);
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-shrink: 0;
+  }
+}
+
+// A calm surface for content that sits above the page background - a hairline
+// border rather than a heavy one, and the smallest elevation the system
+// offers rather than a floating card look.
+.surface-card {
+  background: var(--mat-sys-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-large);
+  padding: var(--space-5);
+}
+
+// A quiet control strip, not a card of primary content: filters and search
+// live here, visually distinct from the table below them.
+.control-strip {
+  background: var(--mat-sys-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-large);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// Status and compa-ratio both read better as a quiet pill than as bare or
+// coloured text. Tone is a data attribute, not a class per tone, so a new
+// tone never means a new selector.
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  font: var(--mat-sys-label-medium);
+  line-height: 1.4;
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+
+  &[data-tone='positive'] {
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+
+  &[data-tone='attention'] {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+}
+
+// The two-line "primary text, quiet secondary beneath" pattern used for a
+// person's name + employee number, and for salary's local + USD figures.
+.cell-primary {
+  display: block;
+}
+
+.cell-secondary {
+  display: block;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 2px;
+}
+
+// Several forms use an ErrorStateMatcher that always reports "invalid" so a
+// server-side-only <mat-error> can be projected and shown on demand (see
+// AlwaysShowErrorStateMatcher's own doc comment for why). The side effect is
+// that Material paints every such field with its red error outline even when
+// nothing is wrong - a permanently "erroring" form reads as broken, not calm.
+// :has() lets the outline stay neutral exactly when there is no message to
+// back it up, and turn red the moment a real <mat-error> appears - the same
+// distinction the @if around each <mat-error> already draws.
+mat-form-field:not(:has(mat-error)) {
+  --mat-form-field-outlined-error-outline-color: var(--mat-sys-outline);
+  --mat-form-field-outlined-error-hover-outline-color: var(--mat-sys-on-surface);
+  --mat-form-field-outlined-error-focus-outline-color: var(--mat-sys-primary);
+  --mat-form-field-outlined-error-label-text-color: var(--mat-sys-on-surface-variant);
+  --mat-form-field-outlined-error-hover-label-text-color: var(--mat-sys-on-surface-variant);
+  --mat-form-field-outlined-error-focus-label-text-color: var(--mat-sys-primary);
+  --mat-form-field-outlined-error-caret-color: var(--mat-sys-primary);
+  --mat-form-field-error-text-color: var(--mat-sys-on-surface-variant);
+}

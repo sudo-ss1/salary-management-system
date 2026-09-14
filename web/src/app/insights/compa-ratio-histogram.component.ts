@@ -24,23 +24,36 @@ const BANDS: ReadonlyArray<{ key: CompaRatioBucketKey; label: string; problem: b
   template: `
     <h2>How many people sit where against their band</h2>
     <p class="note">Click a bar to see those employees.</p>
-    <ngx-charts-bar-vertical
-      [results]="series()"
-      [xAxis]="true"
-      [yAxis]="true"
-      [scheme]="colourScheme"
-      [roundDomains]="true"
-      [view]="[720, 360]"
-      (select)="onSelect($event)" />
+    <div class="chart-frame">
+      <ngx-charts-bar-vertical
+        [results]="series()"
+        [xAxis]="true"
+        [yAxis]="true"
+        [scheme]="colourScheme"
+        [roundDomains]="true"
+        (select)="onSelect($event)" />
+    </div>
   `,
-  styles: [`:host { display: block; } .note { opacity: .7; font-size: .85rem; }`],
+  styles: [`
+    :host { display: block; }
+    .note { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); margin-bottom: var(--space-3); }
+
+    // No fixed [view]: ngx-charts measures this frame's box and redraws on
+    // resize, so the chart fits its card at any viewport width instead of
+    // forcing a 720px-wide scrollbar onto the page.
+    .chart-frame { width: 100%; height: 320px; }
+  `],
 })
 export class CompaRatioHistogramComponent {
   readonly buckets = input.required<ReadonlyArray<CompaRatioBucket>>();
   readonly bucketSelected = output<CompaRatioBucketKey>();
 
-  readonly outOfBandColour = '#b3261e';
-  readonly inBandColour = '#3f51b5';
+  // Read from the resolved theme rather than hard-coded, so this stays in
+  // step with the palette (and any future dark mode) automatically. ngx-charts
+  // applies these as inline SVG fill styles, which resolve CSS custom
+  // properties from the document just like any other inline style.
+  readonly outOfBandColour = 'var(--mat-sys-error)';
+  readonly inBandColour = 'var(--mat-sys-primary)';
 
   readonly colourScheme: Color = {
     name: 'compa-ratio',

@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { take } from 'rxjs';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
-import { SORT_OPTIONS, titleCase } from '../shared/reference';
+import { COUNTRIES, SORT_OPTIONS, titleCase } from '../shared/reference';
 import { isOutOfBand } from '../shared/compa-ratio-bands';
 import { FilterBarComponent, FilterChange } from './filter-bar.component';
 import { EmployeeListStore } from './employee-list.store';
@@ -25,26 +25,35 @@ import { EmployeeSort, SortDirection } from './employee.models';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="header">
-      <h1>Employees</h1>
-      <a mat-flat-button routerLink="/employees/new">Add employee</a>
+    <div class="page-header">
+      <div class="page-header__text">
+        <h1>Employees</h1>
+        <span class="page-header__context">{{ resultCount() }}</span>
+      </div>
+      <div class="page-header__actions">
+        <a mat-flat-button routerLink="/employees/new">Add employee</a>
+      </div>
     </div>
 
-    <mat-form-field appearance="outline" class="search">
-      <mat-label>Search name, email or employee number</mat-label>
-      <input matInput [value]="store.search()" (input)="onSearch($event)" />
-    </mat-form-field>
+    <div class="control-strip">
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>Search name, email or employee number</mat-label>
+        <input matInput [value]="store.search()" (input)="onSearch($event)" />
+      </mat-form-field>
 
-    <app-filter-bar [value]="filters()" (changed)="onFilterChange($event)" />
+      <div class="filter-row">
+        <app-filter-bar [value]="filters()" (changed)="onFilterChange($event)" />
 
-    <mat-form-field appearance="outline" class="sort">
-      <mat-label>Sort by</mat-label>
-      <mat-select [value]="store.sort()" (valueChange)="onSort($event)">
-        @for (option of sortOptions; track option.value) {
-          <mat-option [value]="option.value">{{ option.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+        <mat-form-field appearance="outline" class="sort">
+          <mat-label>Sort by</mat-label>
+          <mat-select [value]="store.sort()" (valueChange)="onSort($event)">
+            @for (option of sortOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
 
     <app-state-panel
       [state]="store.state()"
@@ -53,57 +62,67 @@ import { EmployeeSort, SortDirection } from './employee.models';
       (retry)="store.setPage(store.page())" />
 
     @if (rows().length > 0) {
-      <table mat-table [dataSource]="rows()">
-        <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
-          <td mat-cell *matCellDef="let row">
-            <a [routerLink]="['/employees', row.id]">{{ row.fullName }}</a>
-            <span class="muted">{{ row.employeeNumber }}</span>
-          </td>
-        </ng-container>
+      <div class="surface-card table-card">
+        <div class="table-scroll">
+          <table mat-table [dataSource]="rows()">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let row">
+                <a class="cell-primary" [routerLink]="['/employees', row.id]">{{ row.fullName }}</a>
+                <span class="cell-secondary">{{ row.employeeNumber }}</span>
+              </td>
+            </ng-container>
 
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Role</th>
-          <td mat-cell *matCellDef="let row">
-            {{ label(row.role) }}<span class="muted">{{ label(row.level) }}</span>
-          </td>
-        </ng-container>
+            <ng-container matColumnDef="role">
+              <th mat-header-cell *matHeaderCellDef>Role</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="cell-primary">{{ label(row.role) }}</span>
+                <span class="cell-secondary">{{ label(row.level) }}</span>
+              </td>
+            </ng-container>
 
-        <ng-container matColumnDef="country">
-          <th mat-header-cell *matHeaderCellDef>Country</th>
-          <td mat-cell *matCellDef="let row">{{ row.countryCode }}</td>
-        </ng-container>
+            <ng-container matColumnDef="country">
+              <th mat-header-cell *matHeaderCellDef>Country</th>
+              <td mat-cell *matCellDef="let row">{{ row.countryCode }}</td>
+            </ng-container>
 
-        <ng-container matColumnDef="salary">
-          <th mat-header-cell *matHeaderCellDef>Salary</th>
-          <td mat-cell *matCellDef="let row">
-            {{ row.salary | money }}<span class="muted">{{ row.salaryBaseUsd | money }}</span>
-          </td>
-        </ng-container>
+            <ng-container matColumnDef="salary">
+              <th mat-header-cell *matHeaderCellDef class="numeric-col">Salary</th>
+              <td mat-cell *matCellDef="let row" class="numeric-col">
+                <span class="cell-primary numeric">{{ row.salary | money }}</span>
+                <span class="cell-secondary numeric">{{ row.salaryBaseUsd | money }}</span>
+              </td>
+            </ng-container>
 
-        <ng-container matColumnDef="compaRatio">
-          <th mat-header-cell *matHeaderCellDef>Compa-ratio</th>
-          <td mat-cell *matCellDef="let row">
-            @if (row.compaRatio) {
-              <span class="compa-ratio" [class.out-of-band]="outOfBand(row.compaRatio)">
-                {{ row.compaRatio }}
-              </span>
-            } @else {
-              <span class="muted" title="No pay band exists for this role, level and country">
-                No band
-              </span>
-            }
-          </td>
-        </ng-container>
+            <ng-container matColumnDef="compaRatio">
+              <th mat-header-cell *matHeaderCellDef class="numeric-col">Compa-ratio</th>
+              <td mat-cell *matCellDef="let row" class="numeric-col">
+                @if (row.compaRatio) {
+                  <span class="compa-ratio numeric" [class.out-of-band]="outOfBand(row.compaRatio)">
+                    {{ row.compaRatio }}
+                  </span>
+                } @else {
+                  <span class="cell-secondary" title="No pay band exists for this role, level and country">
+                    No band
+                  </span>
+                }
+              </td>
+            </ng-container>
 
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let row">{{ label(row.status) }}</td>
-        </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="chip" [attr.data-tone]="row.status === 'ACTIVE' ? 'positive' : null">
+                  {{ label(row.status) }}
+                </span>
+              </td>
+            </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
-      </table>
+            <tr mat-header-row *matHeaderRowDef="columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          </table>
+        </div>
+      </div>
     }
 
     <mat-paginator
@@ -114,13 +133,64 @@ import { EmployeeSort, SortDirection } from './employee.models';
       (page)="onPage($event)" />
   `,
   styles: [`
-    .header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-    .search { width: 100%; max-width: 32rem; }
-    .sort { min-width: 14rem; margin-top: .5rem; }
-    table { width: 100%; margin-top: 1rem; }
-    .muted { display: block; font-size: .8rem; opacity: .65; }
-    .compa-ratio { font-variant-numeric: tabular-nums; }
-    .out-of-band { color: var(--mat-sys-error, #b3261e); font-weight: 600; }
+    .search { width: 100%; }
+    .search .mat-mdc-text-field-wrapper { background: transparent; }
+
+    .filter-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+
+    .sort { width: 14rem; flex: 0 0 auto; }
+
+    .table-card { padding: 0; overflow: hidden; }
+    .table-scroll { max-height: 70vh; overflow: auto; }
+
+    table { width: 100%; }
+
+    // Column meaning must survive scrolling 10,000 rows.
+    th.mat-mdc-header-cell {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--mat-sys-surface-container-low);
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    tr.mat-mdc-row:hover {
+      background: var(--mat-sys-surface-container);
+    }
+
+    tr.mat-mdc-row td {
+      border-bottom-color: var(--mat-sys-outline-variant);
+    }
+
+    .cell-primary { display: block; }
+    .cell-primary[routerLink] { text-decoration: none; font-weight: 500; }
+    .cell-primary[routerLink]:hover { text-decoration: underline; }
+
+    // Figures are scanned down a column, so their whole cell - header and
+    // data - sits flush right rather than following the table's default
+    // left alignment.
+    .numeric-col { text-align: right; }
+
+    .compa-ratio {
+      display: inline-flex;
+      padding: var(--space-1) var(--space-3);
+      border-radius: 999px;
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface-variant);
+      font-weight: 500;
+    }
+
+    .compa-ratio.out-of-band {
+      background: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+      font-weight: 600;
+    }
   `],
 })
 export class EmployeeListComponent {
@@ -147,6 +217,19 @@ export class EmployeeListComponent {
   protected rows() {
     const state = this.store.state();
     return state.status === 'ready' ? state.data.content : [];
+  }
+
+  /** The page-header context line: a count that explains what "Employees" means right now. */
+  protected resultCount(): string {
+    const state = this.store.state();
+    const total = state.status === 'ready' ? state.data.totalElements : 0;
+    const formatted = total.toLocaleString();
+    const country = this.store.country();
+    if (country) {
+      const countryLabel = COUNTRIES.find(option => option.value === country)?.label ?? country;
+      return `${formatted} in ${countryLabel}`;
+    }
+    return `${formatted} employees`;
   }
 
   protected filters() {

@@ -32,9 +32,10 @@ import { SalaryHistoryItem } from './employee.models';
           <td mat-cell *matCellDef="let row">{{ row.effectiveFrom }} to {{ row.effectiveTo }}</td>
         </ng-container>
         <ng-container matColumnDef="salary">
-          <th mat-header-cell *matHeaderCellDef>Salary</th>
-          <td mat-cell *matCellDef="let row">
-            {{ row.salary | money }}<span class="muted">{{ row.salaryBaseUsd | money }}</span>
+          <th mat-header-cell *matHeaderCellDef class="numeric-col">Salary</th>
+          <td mat-cell *matCellDef="let row" class="numeric-col">
+            <span class="cell-primary numeric">{{ row.salary | money }}</span>
+            <span class="cell-secondary numeric">{{ row.salaryBaseUsd | money }}</span>
           </td>
         </ng-container>
         <ng-container matColumnDef="reason">
@@ -48,7 +49,8 @@ import { SalaryHistoryItem } from './employee.models';
   `,
   styles: [`
     table { width: 100%; }
-    .muted { display: block; font-size: .8rem; opacity: .65; }
+    .numeric-col { text-align: right; }
+    tr.mat-mdc-row:hover { background: var(--mat-sys-surface-container); }
   `],
 })
 export class SalaryHistoryComponent {

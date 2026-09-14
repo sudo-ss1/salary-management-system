@@ -70,8 +70,10 @@ export interface FilterChange {
     </div>
   `,
   styles: [`
-    .filters { display: flex; flex-wrap: wrap; gap: 1rem; }
-    mat-form-field { min-width: 12rem; flex: 1 1 12rem; }
+    // A compact, wrapping control strip at natural widths - these are filters,
+    // not the main content, so they should not stretch to fill the viewport.
+    .filters { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+    mat-form-field { width: 12.5rem; flex: 0 0 auto; }
   `],
 })
 export class FilterBarComponent {

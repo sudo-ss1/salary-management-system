@@ -27,9 +27,28 @@ import { RequestState } from './request-state';
     }
   `,
   styles: [`
-    .panel { display: flex; flex-direction: column; align-items: center; gap: .75rem; padding: 3rem 1rem; }
-    .error { color: var(--mat-sys-error, #b3261e); }
-    p { margin: 0; text-align: center; }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+      padding: var(--space-7) var(--space-4);
+      text-align: center;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .panel mat-icon {
+      font-size: 2.25rem;
+      width: 2.25rem;
+      height: 2.25rem;
+      opacity: .6;
+    }
+
+    .error { color: var(--mat-sys-error); }
+    .error mat-icon { opacity: .8; }
+
+    p { margin: 0; text-align: center; max-width: 32rem; }
   `],
 })
 export class StatePanelComponent {

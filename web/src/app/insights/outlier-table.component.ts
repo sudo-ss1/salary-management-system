@@ -32,35 +32,42 @@ const OUTLIER_BANDS: ReadonlyArray<CompaRatioBucketKey> = ['LT_80', 'GT_120'];
         (retry)="store.reload()" />
 
       @if (rows().length > 0) {
-        <table mat-table [dataSource]="rows()">
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>Name</th>
-            <td mat-cell *matCellDef="let row">
-              <a [routerLink]="['/employees', row.employeeId]">{{ row.fullName }}</a>
-              <span class="muted">{{ row.employeeNumber }}</span>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="role">
-            <th mat-header-cell *matHeaderCellDef>Role</th>
-            <td mat-cell *matCellDef="let row">
-              {{ label(row.role) }}<span class="muted">{{ label(row.level) }} · {{ row.countryCode }}</span>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="salary">
-            <th mat-header-cell *matHeaderCellDef>Salary</th>
-            <td mat-cell *matCellDef="let row">{{ row.salary | money }}</td>
-          </ng-container>
-          <ng-container matColumnDef="bandMid">
-            <th mat-header-cell *matHeaderCellDef>Band midpoint</th>
-            <td mat-cell *matCellDef="let row">{{ row.bandMid | money }}</td>
-          </ng-container>
-          <ng-container matColumnDef="compaRatio">
-            <th mat-header-cell *matHeaderCellDef>Compa-ratio</th>
-            <td mat-cell *matCellDef="let row"><strong>{{ row.compaRatio }}</strong></td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns"></tr>
-        </table>
+        <div class="surface-card table-card">
+          <div class="table-scroll">
+            <table mat-table [dataSource]="rows()">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Name</th>
+                <td mat-cell *matCellDef="let row">
+                  <a class="cell-primary" [routerLink]="['/employees', row.employeeId]">{{ row.fullName }}</a>
+                  <span class="cell-secondary">{{ row.employeeNumber }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="role">
+                <th mat-header-cell *matHeaderCellDef>Role</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="cell-primary">{{ label(row.role) }}</span>
+                  <span class="cell-secondary">{{ label(row.level) }} · {{ row.countryCode }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="salary">
+                <th mat-header-cell *matHeaderCellDef class="numeric-col">Salary</th>
+                <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row.salary | money }}</td>
+              </ng-container>
+              <ng-container matColumnDef="bandMid">
+                <th mat-header-cell *matHeaderCellDef class="numeric-col">Band midpoint</th>
+                <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row.bandMid | money }}</td>
+              </ng-container>
+              <ng-container matColumnDef="compaRatio">
+                <th mat-header-cell *matHeaderCellDef class="numeric-col">Compa-ratio</th>
+                <td mat-cell *matCellDef="let row" class="numeric-col">
+                  <span class="compa-ratio out-of-band numeric">{{ row.compaRatio }}</span>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="columns"></tr>
+              <tr mat-row *matRowDef="let row; columns: columns"></tr>
+            </table>
+          </div>
+        </div>
 
         <mat-paginator
           [length]="total()"
@@ -72,10 +79,37 @@ const OUTLIER_BANDS: ReadonlyArray<CompaRatioBucketKey> = ['LT_80', 'GT_120'];
     }
   `,
   styles: [`
-    :host { display: block; margin-top: 2rem; }
+    :host { display: block; margin-top: var(--space-7); }
+
+    h2 { margin-bottom: var(--space-4); }
+
+    .table-card { padding: 0; overflow: hidden; margin-bottom: var(--space-4); }
+    .table-scroll { max-height: 70vh; overflow: auto; }
     table { width: 100%; }
-    .muted { display: block; font-size: .8rem; opacity: .65; }
-    .note { opacity: .75; max-width: 48rem; }
+
+    th.mat-mdc-header-cell {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--mat-sys-surface-container-low);
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    tr.mat-mdc-row:hover { background: var(--mat-sys-surface-container); }
+    tr.mat-mdc-row td { border-bottom-color: var(--mat-sys-outline-variant); }
+
+    .numeric-col { text-align: right; }
+
+    .compa-ratio {
+      display: inline-flex;
+      padding: var(--space-1) var(--space-3);
+      border-radius: 999px;
+      font-weight: 600;
+      background: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+    }
+
+    .note { color: var(--mat-sys-on-surface-variant); max-width: 48rem; }
   `],
 })
 export class OutlierTableComponent {

@@ -69,8 +69,14 @@ const RENDERED_FIELDS = new Set(['amount', 'salary.amount', 'effectiveFrom', 'ch
     </mat-dialog-actions>
   `,
   styles: [`
-    mat-dialog-content { display: flex; flex-direction: column; gap: .5rem; min-width: 22rem; }
-    .error { color: var(--mat-sys-error, #b3261e); margin: 0; }
+    mat-dialog-content { display: flex; flex-direction: column; gap: var(--space-2); min-width: 24rem; }
+    .error {
+      color: var(--mat-sys-on-error-container);
+      background: var(--mat-sys-error-container);
+      border-radius: var(--mat-sys-corner-medium);
+      padding: var(--space-2) var(--space-3);
+      margin: 0;
+    }
   `],
 })
 export class RecordRaiseDialogComponent {

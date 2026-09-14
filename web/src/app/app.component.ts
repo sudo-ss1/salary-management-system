@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <mat-toolbar color="primary">
+    <mat-toolbar class="app-bar">
       <span class="brand">Payscope</span>
       <nav>
         <a mat-button routerLink="/employees" routerLinkActive="active">Employees</a>
@@ -19,8 +19,44 @@ import { MatButtonModule } from '@angular/material/button';
     <main><router-outlet /></main>
   `,
   styles: [`
-    .brand { font-weight: 600; margin-right: 2rem; }
-    main { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+    :host { display: block; min-height: 100%; }
+
+    .app-bar {
+      background: var(--mat-sys-surface);
+      color: var(--mat-sys-on-surface);
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      gap: var(--space-6);
+    }
+
+    .brand {
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--mat-sys-on-surface);
+    }
+
+    nav {
+      display: flex;
+      gap: var(--space-2);
+      height: 100%;
+    }
+
+    nav a {
+      color: var(--mat-sys-on-surface-variant);
+      border-radius: var(--mat-sys-corner-full, 999px);
+    }
+
+    // A clear but quiet active state: a filled pill in the primary container,
+    // not a coloured underline that fights the hairline below the bar.
+    nav a.active {
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+    }
+
+    main {
+      padding: var(--space-6) var(--gutter);
+      max-width: var(--page-max);
+      margin: 0 auto;
+    }
   `],
 })
 export class AppComponent {}

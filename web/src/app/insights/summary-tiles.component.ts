@@ -12,7 +12,7 @@ import { SummaryResponse } from './analytics.models';
     <div class="tiles">
       <mat-card>
         <span class="label">Headcount</span>
-        <span class="figure">{{ summary().headcount }}</span>
+        <span class="figure">{{ summary().headcount.toLocaleString() }}</span>
       </mat-card>
       <mat-card>
         <span class="label">Total cost to company</span>
@@ -37,11 +37,43 @@ import { SummaryResponse } from './analytics.models';
     </div>
   `,
   styles: [`
-    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
-    mat-card { padding: 1.25rem; display: flex; flex-direction: column; gap: .25rem; }
-    .label { font-size: .85rem; opacity: .7; }
-    .figure { font-size: 1.9rem; font-variant-numeric: tabular-nums; }
-    .note { font-size: .75rem; opacity: .6; }
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+    }
+
+    mat-card {
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      background: var(--mat-sys-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+      box-shadow: none;
+    }
+
+    .label {
+      font: var(--mat-sys-label-medium);
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    // The figure is the hero of the tile - the largest, boldest thing on it.
+    .figure {
+      font-size: 2rem;
+      font-weight: 500;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: 'tnum' 1;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .note {
+      font: var(--mat-sys-body-small);
+      color: var(--mat-sys-on-surface-variant);
+      opacity: .85;
+    }
   `],
 })
 export class SummaryTilesComponent {

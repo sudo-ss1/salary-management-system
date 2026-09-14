@@ -11,6 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
+import { isOutOfBand } from '../shared/compa-ratio-bands';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { DEPARTMENTS, EMPLOYMENT_TYPES, LEVELS, ROLES, titleCase } from '../shared/reference';
 import { SalaryHistoryComponent } from './salary-history.component';
@@ -28,17 +29,28 @@ import { EmployeeDetail } from './employee.models';
   providers: [EmployeeDetailStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a routerLink="/employees">Back to employees</a>
+    <a class="back-link" routerLink="/employees">Back to employees</a>
 
     <app-state-panel [state]="store.state()" (retry)="store.load(+id())" />
 
     @if (employee(); as person) {
-      <h1>{{ person.fullName }}</h1>
+      <div class="page-header">
+        <div class="page-header__text">
+          <h1>{{ person.fullName }}</h1>
+          <span class="page-header__context">{{ person.employeeNumber }} · {{ label(person.status) }}</span>
+        </div>
+      </div>
 
-      <dl class="facts">
+      <!-- Identity: read-only facts about the record, not editable fields. -->
+      <dl class="facts surface-card">
         <div><dt>Employee number</dt><dd>{{ person.employeeNumber }}</dd></div>
         <div><dt>Hire date</dt><dd>{{ person.hireDate }}</dd></div>
-        <div><dt>Status</dt><dd>{{ label(person.status) }}</dd></div>
+        <div>
+          <dt>Status</dt>
+          <dd><span class="chip" [attr.data-tone]="person.status === 'ACTIVE' ? 'positive' : null">
+            {{ label(person.status) }}
+          </span></dd>
+        </div>
       </dl>
 
       @if (store.conflict()) {
@@ -48,112 +60,185 @@ import { EmployeeDetail } from './employee.models';
         </div>
       }
 
-      <mat-tab-group>
+      <mat-tab-group class="detail-tabs">
         <mat-tab label="Details">
-          <mat-card>
-            <mat-form-field appearance="outline">
-              <mat-label>Full name</mat-label>
-              <input matInput [(ngModel)]="form.fullName" [errorStateMatcher]="alwaysShowErrors" />
-              @if (store.fieldErrors()['fullName']; as message) {
-                <mat-error>{{ message }}</mat-error>
-              }
-            </mat-form-field>
+          <!-- Current pay is why this page is open, so it leads - the pay
+               figure is the most prominent number on the screen. -->
+          <section class="surface-card pay-card">
+            <h2>Current pay</h2>
+            <div class="pay-figure">
+              <span class="pay-figure__primary numeric">{{ person.salary | money }}</span>
+              <span class="pay-figure__secondary numeric">{{ person.salaryBaseUsd | money }} at the recorded rate</span>
+            </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Email</mat-label>
-              <input matInput [(ngModel)]="form.email" [errorStateMatcher]="alwaysShowErrors" />
-              @if (store.fieldErrors()['email']; as message) {
-                <mat-error>{{ message }}</mat-error>
-              }
-            </mat-form-field>
+            @if (person.bandMid) {
+              <div class="compa-explain">
+                <span class="compa-ratio numeric" [class.out-of-band]="isOutOfBand(person.compaRatio ?? '')">
+                  {{ person.compaRatio }}
+                </span>
+                <p>
+                  Compared against a band midpoint of <strong>{{ person.bandMid | money }}</strong>
+                  (range {{ person.bandMin | money }} to {{ person.bandMax | money }}).
+                </p>
+              </div>
+            } @else {
+              <p class="cell-secondary">
+                No pay band exists for {{ label(person.role) }} at {{ label(person.level) }} in
+                {{ person.countryCode }}, so no compa-ratio can be calculated.
+              </p>
+            }
 
-            <mat-form-field appearance="outline">
-              <mat-label>Department</mat-label>
-              <mat-select [(ngModel)]="form.department">
-                @for (option of departments; track option.value) {
-                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            <button mat-stroked-button (click)="openRaiseDialog(person)">Record a raise</button>
+          </section>
+
+          <!-- Editable details, grouped by what they describe. -->
+          <section class="surface-card details-card">
+            <h2>Details</h2>
+            <div class="field-group">
+              <mat-form-field appearance="outline" class="field-wide">
+                <mat-label>Full name</mat-label>
+                <input matInput [(ngModel)]="form.fullName" [errorStateMatcher]="alwaysShowErrors" />
+                @if (store.fieldErrors()['fullName']; as message) {
+                  <mat-error>{{ message }}</mat-error>
                 }
-              </mat-select>
-            </mat-form-field>
+              </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Role</mat-label>
-              <mat-select [(ngModel)]="form.role">
-                @for (option of roles; track option.value) {
-                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+              <mat-form-field appearance="outline" class="field-wide">
+                <mat-label>Email</mat-label>
+                <input matInput [(ngModel)]="form.email" [errorStateMatcher]="alwaysShowErrors" />
+                @if (store.fieldErrors()['email']; as message) {
+                  <mat-error>{{ message }}</mat-error>
                 }
-              </mat-select>
-            </mat-form-field>
+              </mat-form-field>
+            </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Level</mat-label>
-              <mat-select [(ngModel)]="form.level">
-                @for (option of levels; track option.value) {
-                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <div class="field-group">
+              <mat-form-field appearance="outline" class="field-medium">
+                <mat-label>Department</mat-label>
+                <mat-select [(ngModel)]="form.department">
+                  @for (option of departments; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Employment type</mat-label>
-              <mat-select [(ngModel)]="form.employmentType">
-                @for (option of employmentTypes; track option.value) {
-                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+              <mat-form-field appearance="outline" class="field-medium">
+                <mat-label>Role</mat-label>
+                <mat-select [(ngModel)]="form.role">
+                  @for (option of roles; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="field-narrow">
+                <mat-label>Level</mat-label>
+                <mat-select [(ngModel)]="form.level">
+                  @for (option of levels; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="field-medium">
+                <mat-label>Employment type</mat-label>
+                <mat-select [(ngModel)]="form.employmentType">
+                  @for (option of employmentTypes; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
 
             <div class="actions">
               <button mat-flat-button [disabled]="store.saving()" (click)="onSave()">Save</button>
+              <span class="actions__spacer"></span>
               <button mat-stroked-button [disabled]="store.saving()"
                       (click)="confirmDeactivate(person)">Deactivate</button>
               <button mat-stroked-button color="warn" [disabled]="store.saving()"
                       (click)="confirmDelete(person)">Delete</button>
             </div>
-          </mat-card>
-
-          <mat-card class="pay">
-            <h2>Current pay</h2>
-            <p class="figure">{{ person.salary | money }}</p>
-            <p class="muted">{{ person.salaryBaseUsd | money }} at the recorded rate</p>
-            <button mat-stroked-button (click)="openRaiseDialog(person)">Record a raise</button>
-
-            @if (person.bandMid) {
-              <p>
-                Compa-ratio <strong>{{ person.compaRatio }}</strong>
-                against a band midpoint of {{ person.bandMid | money }}
-                (range {{ person.bandMin | money }} to {{ person.bandMax | money }}).
-              </p>
-            } @else {
-              <p class="muted">
-                No pay band exists for {{ label(person.role) }} at {{ label(person.level) }} in
-                {{ person.countryCode }}, so no compa-ratio can be calculated.
-              </p>
-            }
-          </mat-card>
+          </section>
         </mat-tab>
 
         <mat-tab label="Salary history">
           <ng-template matTabContent>
-            <app-salary-history [employeeId]="+id()" />
+            <div class="surface-card history-card">
+              <app-salary-history [employeeId]="+id()" />
+            </div>
           </ng-template>
         </mat-tab>
       </mat-tab-group>
     }
   `,
   styles: [`
-    .facts { display: flex; gap: 1.5rem; margin: .5rem 0 0; }
-    .facts div { display: flex; gap: .35rem; }
-    .facts dt { opacity: .65; margin: 0; }
+    .back-link { display: inline-block; margin-bottom: var(--space-4); }
+
+    .facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-6);
+      margin: 0 0 var(--space-5);
+      padding: var(--space-4) var(--space-5);
+    }
+    .facts div { display: flex; align-items: center; gap: var(--space-2); }
+    .facts dt { color: var(--mat-sys-on-surface-variant); margin: 0; font: var(--mat-sys-label-medium); }
     .facts dd { margin: 0; font-weight: 500; }
-    .conflict { display: flex; align-items: center; gap: 1rem; padding: .75rem 1rem;
-                border: 1px solid var(--mat-sys-error, #b3261e); border-radius: 4px; margin: 1rem 0; }
-    mat-card { padding: 1.5rem; margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; }
-    mat-form-field { flex: 1 1 16rem; }
-    .actions { flex-basis: 100%; display: flex; gap: .75rem; }
-    .pay { display: block; }
-    .figure { font-size: 1.75rem; margin: .25rem 0; }
-    .muted { opacity: .7; }
+
+    .conflict {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+      border-radius: var(--mat-sys-corner-large);
+      margin: 0 0 var(--space-5);
+    }
+
+    .detail-tabs { display: block; }
+
+    .pay-card, .details-card, .history-card { margin-top: var(--space-5); }
+
+    .pay-card { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
+
+    .pay-figure { display: flex; flex-direction: column; gap: var(--space-1); }
+    .pay-figure__primary { font-size: 2.25rem; font-weight: 500; line-height: 1.2; }
+    .pay-figure__secondary { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-medium); }
+
+    .compa-explain { display: flex; align-items: center; gap: var(--space-3); }
+    .compa-explain p { margin: 0; color: var(--mat-sys-on-surface-variant); }
+
+    .compa-ratio {
+      display: inline-flex;
+      flex-shrink: 0;
+      padding: var(--space-1) var(--space-3);
+      border-radius: 999px;
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface-variant);
+      font-weight: 600;
+    }
+    .compa-ratio.out-of-band {
+      background: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+    }
+
+    .field-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      margin-top: var(--space-4);
+    }
+    .field-group:first-of-type { margin-top: var(--space-3); }
+    .field-wide { flex: 1 1 18rem; }
+    .field-medium { flex: 1 1 14rem; }
+    .field-narrow { flex: 0 1 9rem; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-5);
+    }
+    .actions__spacer { flex: 1 1 auto; }
   `],
 })
 export class EmployeeDetailComponent {
@@ -168,6 +253,7 @@ export class EmployeeDetailComponent {
   protected readonly levels = LEVELS;
   protected readonly employmentTypes = EMPLOYMENT_TYPES;
   protected readonly label = titleCase;
+  protected readonly isOutOfBand = isOutOfBand;
   protected readonly alwaysShowErrors = new AlwaysShowErrorStateMatcher();
 
   protected form = {
