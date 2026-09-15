@@ -63,6 +63,11 @@ Railway, App Runner or any container host.
       -e DATABASE_URL='postgres://user:password@host:5432/payscope' \
       payscope
 
+`render.yaml` declares that service and a managed Postgres as a Render
+blueprint, so the hosted instance is provisioned from this repository rather
+than configured by hand. Any other container host works the same way — the
+image needs no platform-specific support.
+
 Two variables, both optional in the sense that the platform usually sets them:
 
 | Variable | Meaning |
