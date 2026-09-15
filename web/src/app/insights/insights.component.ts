@@ -87,7 +87,7 @@ import { groupLabel } from '../shared/group-label';
               </ng-container>
               @for (percentile of percentiles; track percentile) {
                 <ng-container [matColumnDef]="percentile">
-                  <th mat-header-cell *matHeaderCellDef class="numeric-col">{{ percentile }}</th>
+                  <th mat-header-cell *matHeaderCellDef class="numeric-col">{{ percentileLabels[percentile] }}</th>
                   <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row[percentile] | money }}</td>
                 </ng-container>
               }
@@ -101,8 +101,12 @@ import { groupLabel } from '../shared/group-label';
           </div>
         </div>
         <p class="note">
-          Percentiles are in USD and answer what a group costs. Median compa-ratio compares each
-          salary against its own country's band, so it is the figure to use when comparing countries.
+          A percentile is the figure that share of the group earns below: the 75th percentile is what
+          three-quarters of them earn less than. <strong>Median</strong> is the middle salary, and a
+          better guide than <strong>Average</strong>, which a handful of large salaries can pull
+          upward. All figures are in USD. <strong>Median compa-ratio</strong> compares each salary
+          against its own country's band rather than converting it, so it is the figure to use when
+          comparing countries.
         </p>
       }
     </section>
@@ -152,6 +156,17 @@ export class InsightsComponent {
 
   protected readonly dimensions: GroupByDimension[] = ['COUNTRY', 'DEPARTMENT', 'ROLE', 'LEVEL'];
   protected readonly percentiles = ['p25', 'p50', 'p75', 'p90', 'mean'];
+
+  // The column keys index into the row; these are what the reader sees. "p50"
+  // is jargon for the persona requirements.md describes, and "Median" is the
+  // word they already use for the same thing.
+  protected readonly percentileLabels: Record<string, string> = {
+    p25: '25th percentile',
+    p50: 'Median',
+    p75: '75th percentile',
+    p90: '90th percentile',
+    mean: 'Average',
+  };
   protected readonly columns =
     ['group', 'headcount', 'p25', 'p50', 'p75', 'p90', 'mean', 'medianCompaRatio'];
   protected readonly label = titleCase;

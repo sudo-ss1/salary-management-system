@@ -55,9 +55,31 @@ describe('EmployeeDetailComponent', () => {
     expect(text).toContain('1.0000');
     expect(text).toContain('₹3,712,500.00'); // band midpoint
 
+    // The headline must say what the figure IS and what it is measured
+    // against. A bare ratio in a pill is unreadable for the non-technical
+    // persona requirements.md describes - that was a real defect here.
+    expect(text).toContain('100%');
+    expect(text).toContain('of band midpoint');
+    expect(text).toContain('at the midpoint');
+
     // The @if (store.conflict()) gate is only proven by exercising both
     // branches - a successful load with no conflict must show no banner.
     expect(harness.routeNativeElement!.querySelector('[role="alert"]')).toBeNull();
+  }));
+
+  it('states an off-midpoint compa-ratio as a percentage and a direction', fakeAsync(async () => {
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush({ ...DETAIL, compaRatio: '0.8978' });
+    harness.detectChanges();
+
+    const text = harness.routeNativeElement!.textContent!;
+    expect(text).toContain('90%');
+    expect(text).toContain('10% below the midpoint');
+    // The exact ratio is de-emphasised, never dropped.
+    expect(text).toContain('0.8978');
+    // Below 0.80 is the outlier threshold; 0.8978 is under the midpoint but
+    // inside the band, so it must not be painted as a problem.
+    expect(harness.routeNativeElement!.querySelector('.compa-ratio.out-of-band')).toBeNull();
   }));
 
   it('shows hire date, employee number and status as read-only facts about the record', fakeAsync(async () => {

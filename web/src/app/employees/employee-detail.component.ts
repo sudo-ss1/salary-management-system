@@ -11,7 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
-import { isOutOfBand } from '../shared/compa-ratio-bands';
+import { compaRatioGap, compaRatioPercent, isOutOfBand } from '../shared/compa-ratio-bands';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { DEPARTMENTS, EMPLOYMENT_TYPES, LEVELS, ROLES, titleCase } from '../shared/reference';
 import { SalaryHistoryComponent } from './salary-history.component';
@@ -71,14 +71,25 @@ import { EmployeeDetail } from './employee.models';
               <span class="pay-figure__secondary numeric">{{ person.salaryBaseUsd | money }} at the recorded rate</span>
             </div>
 
+            <!--
+              The headline is a percentage, not the raw ratio. requirements.md
+              names a non-technical HR manager as the user, and an unlabelled
+              "0.8978" tells them nothing - "90% of midpoint" is the unit the
+              pay conversation actually happens in. The exact ratio stays in
+              the sentence, so no precision is hidden, only de-emphasised.
+            -->
             @if (person.bandMid) {
               <div class="compa-explain">
-                <span class="compa-ratio numeric" [class.out-of-band]="isOutOfBand(person.compaRatio ?? '')">
-                  {{ person.compaRatio }}
-                </span>
+                <div class="compa-ratio" [class.out-of-band]="isOutOfBand(person.compaRatio ?? '')">
+                  <span class="compa-ratio__value numeric">{{ compaPercent(person.compaRatio ?? '') }}</span>
+                  <span class="compa-ratio__label">of band midpoint</span>
+                </div>
                 <p>
-                  Compared against a band midpoint of <strong>{{ person.bandMid | money }}</strong>
-                  (range {{ person.bandMin | money }} to {{ person.bandMax | money }}).
+                  Paid {{ compaGap(person.compaRatio ?? '') }} for {{ label(person.level) }}
+                  {{ label(person.role) }} in {{ person.countryCode }} — a compa-ratio of
+                  {{ person.compaRatio }}. The band runs {{ person.bandMin | money }} to
+                  {{ person.bandMax | money }}, with a midpoint of
+                  <strong>{{ person.bandMid | money }}</strong>.
                 </p>
               </div>
             } @else {
@@ -215,13 +226,17 @@ import { EmployeeDetail } from './employee.models';
 
     .compa-ratio {
       display: inline-flex;
+      flex-direction: column;
+      align-items: center;
       flex-shrink: 0;
-      padding: var(--space-1) var(--space-3);
-      border-radius: 999px;
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--mat-sys-corner-medium, 12px);
       background: var(--mat-sys-surface-container-high);
       color: var(--mat-sys-on-surface-variant);
-      font-weight: 600;
+      text-align: center;
     }
+    .compa-ratio__value { font-size: 1.5rem; font-weight: 600; line-height: 1.15; }
+    .compa-ratio__label { font: var(--mat-sys-label-small); margin-top: 2px; }
     .compa-ratio.out-of-band {
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
@@ -259,6 +274,8 @@ export class EmployeeDetailComponent {
   protected readonly employmentTypes = EMPLOYMENT_TYPES;
   protected readonly label = titleCase;
   protected readonly isOutOfBand = isOutOfBand;
+  protected readonly compaPercent = compaRatioPercent;
+  protected readonly compaGap = compaRatioGap;
   protected readonly alwaysShowErrors = new AlwaysShowErrorStateMatcher();
 
   protected form = {

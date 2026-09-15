@@ -88,8 +88,6 @@ before `.distinct()`.
 - No route-id guard: `/employees/abc` sends `NaN`. Verified to degrade cleanly — the backend returns
   a 400 rendered in the error panel — so this is inconsistency with `toPageNumber`, not a bug.
 - Deactivate has no confirmation step: one click, no undo, for a non-technical user.
-- The distribution table's column headers are `p25`/`p50`/`p75`/`p90`/`mean` — jargon for the stated
-  persona. The note beneath explains USD versus compa-ratio but never what a percentile is.
 - `index.html`'s title is still "Web".
 - `zone.js` sits in `dependencies` though only Jest loads it now; it belongs in `devDependencies`.
 - Both charts use a fixed `[view]="[720, 360]"` rather than a responsive size.

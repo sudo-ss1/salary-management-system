@@ -113,6 +113,30 @@ describe('InsightsComponent', () => {
     expect(instance['groupLabel']({ key: { country: 'BR', level: 'JUNIOR' } })).toBe('BR · Junior');
   }));
 
+  it('heads the distribution columns with words the persona uses, not percentile keys', fakeAsync(async () => {
+    const harness = await open();
+    tick();
+    mock.expectOne(r => r.url === '/api/analytics/summary').flush(SUMMARY);
+    mock.expectOne(r => r.url === '/api/analytics/distribution').flush([{
+      key: { country: 'IN' }, headcount: 12,
+      p25: { amount: '1.00', currency: 'USD' }, p50: { amount: '2.00', currency: 'USD' },
+      p75: { amount: '3.00', currency: 'USD' }, p90: { amount: '4.00', currency: 'USD' },
+      mean: { amount: '5.00', currency: 'USD' }, medianCompaRatio: '1.0000',
+    }]);
+    mock.expectOne(r => r.url === '/api/analytics/outliers').flush(EMPTY_OUTLIER_PAGE);
+    harness.detectChanges();
+
+    const headers = Array.from(harness.routeNativeElement!.querySelectorAll('th'))
+      .map(th => th.textContent!.trim());
+
+    // requirements.md names a non-technical HR manager as the reader. "p50"
+    // is the column key; "Median" is the word they already use for it.
+    expect(headers).toContain('Median');
+    expect(headers).toContain('Average');
+    expect(headers).not.toContain('p50');
+    expect(headers).not.toContain('mean');
+  }));
+
   it('restores filters, group-by and the outlier band from the url so the first requests already go out filtered', fakeAsync(async () => {
     await open(
       '/insights?country=IN&level=SENIOR&groupBy=COUNTRY&groupBy=LEVEL&outlierBand=LT_80&outlierPage=1',
