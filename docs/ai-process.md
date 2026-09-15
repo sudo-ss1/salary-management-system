@@ -47,6 +47,29 @@ Tests are integration-first: the backend runs against real PostgreSQL via Testco
 H2, because the design depends on `percentile_cont`, partial unique indexes and
 `SELECT … FOR SHARE` — behaviours an in-memory substitute does not reproduce.
 
+### Branch and commit strategy, and where it departs from production practice
+
+The work sits on two long-lived branches split by layer — `feat/payscope-backend`, then
+`feat/payscope-frontend` stacked on it. **A team should not do this.** A branch ought to deliver a
+vertical slice a user can actually use; neither of these does, since the backend branch produces an
+API nothing calls. Prevailing practice is trunk-based: short-lived ticket branches off `main`,
+merged within a day or two, unfinished work hidden behind flags. A 104-commit pull request is also
+past the size at which review quality is known to collapse, and stacking the client on the API
+serialises work that a team would want to run in parallel.
+
+Every one of those costs is a *coordination* cost, and this was built by one person. What the split
+buys instead is a readable story: the API designed, tested and proven on its own, then a client
+built against a contract that was already settled. That trade is worth making at this size and
+worth reversing at any other.
+
+The commits are deliberately not squashed. **61 `test:` commits against 39 `feat:`**, median 46
+lines added — the test-first cadence made visible. Production teams overwhelmingly squash-merge, so
+`main` gets roughly one commit per pull request, and 171 commits for a single project would be
+unusual in a company repository. Here it is the opposite of a problem: those paired `test:`/`feat:`
+commits are the only durable evidence that the test genuinely preceded the implementation. Squashing
+would delete the proof. The practice that is right for this repository is wrong for a production
+one, and the reverse — which is worth saying out loud rather than leaving to look unconsidered.
+
 ---
 
 ## What the reviews caught
