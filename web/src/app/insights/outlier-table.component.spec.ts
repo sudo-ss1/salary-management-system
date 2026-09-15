@@ -72,7 +72,10 @@ describe('OutlierTableComponent', () => {
     // Compa-ratio never crosses a currency: both figures are local.
     expect(text).toContain('$103,950.00');
     expect(text).toContain('$148,500.00');
-    expect(text).toContain('0.7000');
+    // The column reads as a percentage of midpoint; four decimals is the
+    // precision the server computes at, not what a reader scans.
+    expect(text).toContain('70%');
+    expect(text).not.toContain('0.7000');
   }));
 
   it('asks the server for one direction when a bar is selected', fakeAsync(() => {

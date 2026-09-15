@@ -11,7 +11,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
-import { compaRatioGap, compaRatioPercent, isOutOfBand } from '../shared/compa-ratio-bands';
+import {
+  compaRatioGap, compaRatioPercent, compaRatioShort, isOutOfBand,
+} from '../shared/compa-ratio-bands';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { DEPARTMENTS, EMPLOYMENT_TYPES, LEVELS, ROLES, titleCase } from '../shared/reference';
 import { SalaryHistoryComponent } from './salary-history.component';
@@ -68,7 +70,20 @@ import { EmployeeDetail } from './employee.models';
             <h2>Current pay</h2>
             <div class="pay-figure">
               <span class="pay-figure__primary numeric">{{ person.salary | money }}</span>
-              <span class="pay-figure__secondary numeric">{{ person.salaryBaseUsd | money }} at the recorded rate</span>
+              <span class="pay-figure__secondary">
+                <!--
+                  Not a second salary: the same pay normalised to USD so it can
+                  be added to salaries from five other countries. Naming the
+                  rate and its date is what makes ADR-0001's frozen conversion
+                  auditable on screen rather than only true in the database.
+                -->
+                &asymp; <span class="numeric">{{ person.salaryBaseUsd | money }}</span> USD
+                @if (person.fxRate && person.fxRateDate) {
+                  &middot; converted at
+                  <span class="numeric">{{ person.salary.currency }}&nbsp;1 = {{ usdPerUnit(person) }}</span>,
+                  the rate recorded on {{ person.fxRateDate }}
+                }
+              </span>
             </div>
 
             <!--
@@ -87,7 +102,7 @@ import { EmployeeDetail } from './employee.models';
                 <p>
                   Paid {{ compaGap(person.compaRatio ?? '') }} for {{ label(person.level) }}
                   {{ label(person.role) }} in {{ person.countryCode }} — a compa-ratio of
-                  {{ person.compaRatio }}. The band runs {{ person.bandMin | money }} to
+                  {{ compaShort(person.compaRatio ?? '') }}. The band runs {{ person.bandMin | money }} to
                   {{ person.bandMax | money }}, with a midpoint of
                   <strong>{{ person.bandMid | money }}</strong>.
                 </p>
@@ -276,6 +291,18 @@ export class EmployeeDetailComponent {
   protected readonly isOutOfBand = isOutOfBand;
   protected readonly compaPercent = compaRatioPercent;
   protected readonly compaGap = compaRatioGap;
+  protected readonly compaShort = compaRatioShort;
+
+  /**
+   * The stored rate, formatted as currency and never rounded. fx_rate is held
+   * as USD per unit of the local currency (INR sits at 0.012), so this is the
+   * database's own number with a currency symbol on it - no arithmetic, and in
+   * particular no inversion to the more familiar "$1 = Rs 83.33", which would
+   * mean inventing a repeating decimal the system never recorded.
+   */
+  protected usdPerUnit(person: EmployeeDetail): string {
+    return `$${person.fxRate}`;
+  }
   protected readonly alwaysShowErrors = new AlwaysShowErrorStateMatcher();
 
   protected form = {

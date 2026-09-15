@@ -34,6 +34,14 @@ export interface EmployeeDetail extends EmployeeListItem {
   readonly employmentType: string;
   readonly hireDate: string;
   readonly salaryEffectiveFrom: string;
+  /**
+   * The rate the USD amount was converted at, and the day it was recorded.
+   * A string for the same reason money is: it is a decimal, and it is never
+   * rounded for display - 0.012 shown to two places would read 0.01, a fifth
+   * of the way wrong.
+   */
+  readonly fxRate?: string;
+  readonly fxRateDate?: string;
   readonly bandMin?: Money;
   readonly bandMid?: Money;
   readonly bandMax?: Money;

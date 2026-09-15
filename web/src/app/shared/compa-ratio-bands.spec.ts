@@ -1,5 +1,6 @@
 import {
-  COMPA_RATIO_HIGH, COMPA_RATIO_LOW, compaRatioGap, compaRatioPercent, isOutOfBand,
+  COMPA_RATIO_HIGH, COMPA_RATIO_LOW, compaRatioGap, compaRatioPercent, compaRatioShort,
+  isOutOfBand,
 } from './compa-ratio-bands';
 
 describe('isOutOfBand', () => {
@@ -54,6 +55,29 @@ describe('compaRatioGap', () => {
       const delta = gap === 'at the midpoint' ? 0 : Number(gap.match(/^(\d+)%/)![1]);
       const signed = gap.includes('below') ? -delta : delta;
       expect(percent).toBe(100 + signed);
+    }
+  });
+});
+
+describe('compaRatioShort', () => {
+  it('shortens four decimals to two', () => {
+    expect(compaRatioShort('1.1345')).toBe('1.13');
+  });
+
+  it('rounds rather than truncates', () => {
+    expect(compaRatioShort('0.6989')).toBe('0.70');
+  });
+
+  it('keeps a trailing zero, so the column stays aligned', () => {
+    expect(compaRatioShort('1.2000')).toBe('1.20');
+  });
+
+  // The ratio and the percentage sit in the same sentence. toFixed(2) alone
+  // would print "1.00" beside "101%" for this value.
+  it('never contradicts the percentage beside it, including at a binary half', () => {
+    for (const ratio of ['1.0050', '0.8850', '0.6989', '1.1345', '1.2050']) {
+      const percent = Number(compaRatioPercent(ratio).replace('%', ''));
+      expect(Number(compaRatioShort(ratio)) * 100).toBeCloseTo(percent, 6);
     }
   });
 });

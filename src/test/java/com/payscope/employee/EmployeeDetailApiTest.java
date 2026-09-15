@@ -52,6 +52,17 @@ class EmployeeDetailApiTest {
                 .andExpect(jsonPath("$.salary.currency").value("INR"))
                 .andExpect(jsonPath("$.salaryBaseUsd.amount").value("44550.00"))
                 .andExpect(jsonPath("$.salaryBaseUsd.currency").value("USD"))
+                // The rate that produced that USD amount, and the day it was
+                // recorded. Without both, the converted figure is unauditable -
+                // a reader cannot tell which rate it came from, which is the
+                // whole point of freezing it (ADR-0001). 3712500 x 0.012 = 44550.
+                //
+                // The date is the V5 baseline, not the V1 2026 row: this salary
+                // is effective from a past date and the converter resolves the
+                // most recent rate on or before it. That the two rows carry the
+                // same rate is why only the date distinguishes them here.
+                .andExpect(jsonPath("$.fxRate").value("0.01200000"))
+                .andExpect(jsonPath("$.fxRateDate").value("2000-01-01"))
                 .andExpect(jsonPath("$.employeeVersion").value(0))
                 .andExpect(jsonPath("$.salaryVersion").value(0));
     }

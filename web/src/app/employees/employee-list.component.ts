@@ -11,7 +11,7 @@ import { take } from 'rxjs';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { COUNTRIES, SORT_OPTIONS, titleCase } from '../shared/reference';
-import { isOutOfBand } from '../shared/compa-ratio-bands';
+import { compaRatioPercent, isOutOfBand } from '../shared/compa-ratio-bands';
 import { FilterBarComponent, FilterChange } from './filter-bar.component';
 import { EmployeeListStore } from './employee-list.store';
 import { EmployeeSort, SortDirection } from './employee.models';
@@ -98,8 +98,11 @@ import { EmployeeSort, SortDirection } from './employee.models';
               <th mat-header-cell *matHeaderCellDef class="numeric-col">Compa-ratio</th>
               <td mat-cell *matCellDef="let row" class="numeric-col">
                 @if (row.compaRatio) {
+                  <!-- A percentage of the band midpoint, scanned down a column of
+                       10,000 rows. "113%" reads at a glance where "1.1345" does
+                       not, and the precision buys nothing at this density. -->
                   <span class="compa-ratio numeric" [class.out-of-band]="outOfBand(row.compaRatio)">
-                    {{ row.compaRatio }}
+                    {{ compaPercent(row.compaRatio) }}
                   </span>
                 } @else {
                   <span class="cell-secondary" title="No pay band exists for this role, level and country">
@@ -242,6 +245,8 @@ export class EmployeeListComponent {
   }
 
   protected readonly outOfBand = isOutOfBand;
+
+  protected readonly compaPercent = compaRatioPercent;
 
   protected onSearch(event: Event): void {
     this.store.setSearch((event.target as HTMLInputElement).value);

@@ -27,6 +27,12 @@ public record EmployeeDetailResponse(
         EmployeeStatus status,
         MoneyDto salary,
         MoneyDto salaryBaseUsd,
+        // The rate this salary was converted at and the day it was recorded.
+        // ADR-0001 freezes both onto the row so a historical figure cannot move
+        // when rates do; exposing them is what makes that auditable rather than
+        // merely true - the screen can say which rate produced the USD amount.
+        @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal fxRate,
+        LocalDate fxRateDate,
         LocalDate salaryEffectiveFrom,
         // A decimal the server computed, not a number to do maths with - crosses
         // the wire as a scaled string so trailing zeros survive, same as money.

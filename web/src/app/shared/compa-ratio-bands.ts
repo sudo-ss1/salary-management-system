@@ -49,3 +49,16 @@ export function compaRatioGap(compaRatio: string): string {
   }
   return percent < 0 ? `${-percent}% below the midpoint` : `${percent}% above the midpoint`;
 }
+
+/**
+ * The ratio itself, shortened for reading. Four decimals is the precision the
+ * server computes at; two is what a person can hold in their head.
+ *
+ * Derived from the same rounded integer percent as compaRatioPercent rather
+ * than from toFixed(2), so the two can never contradict each other on screen.
+ * They would otherwise: 1.005 gives Math.round(100.5) = 101%, while
+ * (1.005).toFixed(2) is "1.00", because 1.005 is 1.00499... in binary.
+ */
+export function compaRatioShort(compaRatio: string): string {
+  return (Math.round(Number(compaRatio) * 100) / 100).toFixed(2);
+}

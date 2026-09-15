@@ -52,8 +52,15 @@ describe('EmployeeDetailComponent', () => {
 
     const text = harness.routeNativeElement!.textContent!;
     // The number and its explanation belong together, not in a legend elsewhere.
-    expect(text).toContain('1.0000');
+    expect(text).toContain('1.00');
     expect(text).toContain('₹3,712,500.00'); // band midpoint
+
+    // The USD figure is the same pay normalised, not a second salary. Saying
+    // so is the difference between a reader understanding the column and
+    // reporting it as a bug.
+    expect(text).toContain('≈');
+    expect(text).toContain('$44,550.00');
+    expect(text).toContain('USD');
 
     // The headline must say what the figure IS and what it is measured
     // against. A bare ratio in a pill is unreadable for the non-technical
@@ -75,11 +82,38 @@ describe('EmployeeDetailComponent', () => {
     const text = harness.routeNativeElement!.textContent!;
     expect(text).toContain('90%');
     expect(text).toContain('10% below the midpoint');
-    // The exact ratio is de-emphasised, never dropped.
-    expect(text).toContain('0.8978');
+    // Shortened to two places - rounded, so it can never disagree with the
+    // 90% beside it.
+    expect(text).toContain('a compa-ratio of 0.90');
+    expect(text).not.toContain('0.8978');
     // Below 0.80 is the outlier threshold; 0.8978 is under the midpoint but
     // inside the band, so it must not be painted as a problem.
     expect(harness.routeNativeElement!.querySelector('.compa-ratio.out-of-band')).toBeNull();
+  }));
+
+  it('names the rate and the day it was recorded, so the converted figure is auditable', fakeAsync(async () => {
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7')
+      .flush({ ...DETAIL, fxRate: '0.01200000', fxRateDate: '2000-01-01' });
+    harness.detectChanges();
+
+    const text = harness.routeNativeElement!.textContent!;
+    // ADR-0001 freezes the rate onto the row. That is only auditable if the
+    // screen says which rate produced the USD amount.
+    expect(text).toContain('INR\u00a01 = $0.01200000');
+    expect(text).toContain('2000-01-01');
+    // Never shortened: 0.012 to two places reads 0.01, a fifth of the way out.
+    expect(text).not.toContain('$0.01,');
+  }));
+
+  it('omits the rate clause entirely when the record carries no rate', fakeAsync(async () => {
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush(DETAIL); // no fxRate
+    harness.detectChanges();
+
+    const text = harness.routeNativeElement!.textContent!;
+    expect(text).toContain('$44,550.00');
+    expect(text).not.toContain('converted at');
   }));
 
   it('shows hire date, employee number and status as read-only facts about the record', fakeAsync(async () => {

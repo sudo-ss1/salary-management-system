@@ -14,6 +14,7 @@ import { CompaRatioHistogramComponent } from './compa-ratio-histogram.component'
 import { OutlierTableComponent } from './outlier-table.component';
 import { CompaRatioBucketKey, GroupByDimension } from './analytics.models';
 import { titleCase } from '../shared/reference';
+import { compaRatioPercent } from '../shared/compa-ratio-bands';
 import { groupLabel } from '../shared/group-label';
 
 @Component({
@@ -93,7 +94,7 @@ import { groupLabel } from '../shared/group-label';
               }
               <ng-container matColumnDef="medianCompaRatio">
                 <th mat-header-cell *matHeaderCellDef class="numeric-col">Median compa-ratio</th>
-                <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row.medianCompaRatio ?? '—' }}</td>
+                <td mat-cell *matCellDef="let row" class="numeric numeric-col">{{ row.medianCompaRatio ? compaPercent(row.medianCompaRatio) : '—' }}</td>
               </ng-container>
               <tr mat-header-row *matHeaderRowDef="columns"></tr>
               <tr mat-row *matRowDef="let row; columns: columns"></tr>
@@ -170,6 +171,7 @@ export class InsightsComponent {
   protected readonly columns =
     ['group', 'headcount', 'p25', 'p50', 'p75', 'p90', 'mean', 'medianCompaRatio'];
   protected readonly label = titleCase;
+  protected readonly compaPercent = compaRatioPercent;
   protected readonly selectedBucket = signal<CompaRatioBucketKey | null>(null);
 
   constructor() {

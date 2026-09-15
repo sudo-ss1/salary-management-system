@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { titleCase } from '../shared/reference';
+import { compaRatioPercent } from '../shared/compa-ratio-bands';
 import { InsightsStore } from './insights.store';
 import { CompaRatioBucketKey, OutlierBand } from './analytics.models';
 
@@ -60,7 +61,7 @@ const OUTLIER_BANDS: ReadonlyArray<CompaRatioBucketKey> = ['LT_80', 'GT_120'];
               <ng-container matColumnDef="compaRatio">
                 <th mat-header-cell *matHeaderCellDef class="numeric-col">Compa-ratio</th>
                 <td mat-cell *matCellDef="let row" class="numeric-col">
-                  <span class="compa-ratio out-of-band numeric">{{ row.compaRatio }}</span>
+                  <span class="compa-ratio out-of-band numeric">{{ compaPercent(row.compaRatio) }}</span>
                 </td>
               </ng-container>
               <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -118,6 +119,7 @@ export class OutlierTableComponent {
   protected readonly store = inject(InsightsStore);
   protected readonly columns = ['name', 'role', 'salary', 'bandMid', 'compaRatio'];
   protected readonly label = titleCase;
+  protected readonly compaPercent = compaRatioPercent;
 
   protected readonly isInBandSelection = computed(() => {
     const bucket = this.selectedBucket();
