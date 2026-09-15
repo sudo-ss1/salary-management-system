@@ -53,7 +53,7 @@ forbade pushing outright, and the work is now published to GitHub. Conditions:
   repository.
 - **Never force-push a branch that has already been pushed**, with `--force` or
   `--force-with-lease`. Published history is not rewritten.
-- Push feature branches as well as `master`. The branch structure is part of
+- Push feature branches as well as `main`. The branch structure is part of
   how this work reads; flattening it to one branch loses that.
 
 **One feature per commit. Never batch features together.** A commit that
