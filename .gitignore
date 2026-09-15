@@ -31,3 +31,6 @@ Thumbs.db
 
 # SDD workspace (scratch)
 .superpowers/
+
+# Demo script - notes for recording, not a project artifact.
+docs/demo-script.md
