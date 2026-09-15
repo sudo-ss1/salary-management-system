@@ -44,9 +44,17 @@ If asked to implement something without a test, write the test first and say so.
 
 ## Git
 
-**Commit locally. Never push.** Do not run `git push` under any circumstance.
-The repository is pushed manually by the author once the work is complete. Do
-not add, change or inspect remotes.
+**Push to `origin` is permitted** — changed 2026-09-15; this file previously
+forbade pushing outright, and the work is now published to GitHub. Conditions:
+
+- **Authenticate over SSH**, never with the PAT. See Credentials below: the
+  token stays out of this entirely, which is the whole point of using a key.
+- Adding or changing `origin` is fine. Point it only at the author's own
+  repository.
+- **Never force-push a branch that has already been pushed**, with `--force` or
+  `--force-with-lease`. Published history is not rewritten.
+- Push feature branches as well as `master`. The branch structure is part of
+  how this work reads; flattening it to one branch loses that.
 
 **One feature per commit. Never batch features together.** A commit that
 delivers two unrelated things must be split. Within a single feature, the TDD
@@ -71,6 +79,9 @@ Conventional prefixes: `feat:`, `test:`, `refactor:`, `fix:`, `perf:`, `docs:`,
 - Keep a `.env.example` with the keys and empty values; commit that instead.
 
 If a task appears to need the token, stop and say so rather than using it.
+Pushing does not need it: an SSH key authenticates without a token, and a PAT
+embedded in a remote URL is written to `.git/config` in plaintext, which is the
+most common way these leak.
 
 ## Architecture rules
 
