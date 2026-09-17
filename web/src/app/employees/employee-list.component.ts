@@ -100,13 +100,13 @@ import { EmployeeSort, SortDirection } from './employee.models';
               <!-- The list is where most people meet the term for the first
                    time, so the explanation belongs on the column, not only on
                    the record behind it. -->
-              <th mat-header-cell *matHeaderCellDef class="numeric-col">
+              <th mat-header-cell *matHeaderCellDef class="compa-col">
                 <span class="header-with-info">
-                  <app-compa-ratio-info />
                   Compa-ratio
+                  <app-compa-ratio-info />
                 </span>
               </th>
-              <td mat-cell *matCellDef="let row" class="numeric-col">
+              <td mat-cell *matCellDef="let row" class="compa-col">
                 @if (row.compaRatio) {
                   <!-- A percentage of the band midpoint, scanned down a column of
                        10,000 rows. "113%" reads at a glance where "1.1345" does
@@ -146,16 +146,17 @@ import { EmployeeSort, SortDirection } from './employee.models';
       (page)="onPage($event)" />
   `,
   styles: [`
-    // The control sits BEFORE the label, not after it. This column is
-    // right-aligned, so whatever comes last defines the right edge - with the
-    // control trailing, "Compa-ratio" was pushed left by the width of a button
-    // and no longer shared an edge with the percentages beneath it. Leading,
-    // the label ends exactly where the values do and the control overhangs
-    // into the column's own empty space on the left.
+    // Centred, not right-aligned like the money columns. The values here are
+    // chips rather than digits - nothing lines up decimal-wise, so there is no
+    // edge worth sharing, and a right-aligned header carrying a control could
+    // never agree with the chips beneath it however the two were ordered.
+    // Centring the whole column removes the disagreement instead of chasing it.
+    .compa-col { text-align: center; }
+
     .header-with-info {
       display: inline-flex;
       align-items: center;
-      gap: 2px;
+      gap: 4px;
       white-space: nowrap;
     }
 

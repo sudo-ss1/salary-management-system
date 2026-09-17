@@ -34,17 +34,22 @@ import { MatMenuModule } from '@angular/material/menu';
     </mat-menu>
   `,
   styles: [`
+    // Sized against the text it sits beside, not against Material's default
+    // 40px touch target - a circle wider than the label's cap height reads as
+    // a control in its own right rather than an annotation on the label.
     .info-button {
-      width: 1.75rem;
-      height: 1.75rem;
-      line-height: 1.75rem;
+      width: 1.5rem;
+      height: 1.5rem;
+      line-height: 1.5rem;
+      padding: 0;
       color: var(--mat-sys-on-surface-variant);
       vertical-align: middle;
     }
     .info-button mat-icon {
-      font-size: 1.125rem;
-      width: 1.125rem;
-      height: 1.125rem;
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+      line-height: 1rem;
     }
   `],
 })

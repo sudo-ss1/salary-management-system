@@ -108,20 +108,23 @@ describe('EmployeeListComponent', () => {
     expect(document.body.textContent).toContain('120%');
   }));
 
-  it('keeps the header label flush right with the values, by leading with the control', fakeAsync(async () => {
+  it('centres the compa-ratio column so its header and its chips share one axis', fakeAsync(async () => {
     const harness = await open();
     tick(300);
     mock.expectOne(r => r.url === '/api/employees').flush(PAGE);
     harness.detectChanges();
 
-    // The column is right-aligned, so whatever comes last sets the right edge.
-    // With the control trailing, the label was pushed left by a button's width
-    // and stopped lining up with the percentages beneath it.
-    const header = harness.routeNativeElement!.querySelector('.header-with-info')!;
-    const control = header.querySelector('app-compa-ratio-info')!;
-    const position = control.compareDocumentPosition(header.lastChild!);
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(header.lastChild!.textContent!.trim()).toBe('Compa-ratio');
+    // The values are chips, not digits: there is no decimal edge to share, so
+    // a right-aligned header carrying a control could never agree with them.
+    // Header and cells must carry the same centring class, or the column
+    // disagrees with itself again.
+    const header = harness.routeNativeElement!.querySelector('th.compa-col');
+    const cell = harness.routeNativeElement!.querySelector('td.compa-col');
+    expect(header).not.toBeNull();
+    expect(cell).not.toBeNull();
+    expect(header!.querySelector('app-compa-ratio-info')).not.toBeNull();
+    // The money column stays right-aligned - centring is for this column only.
+    expect(harness.routeNativeElement!.querySelector('th.numeric-col')).not.toBeNull();
   }));
 
   it('reports the server-side total rather than the number of rows on screen', fakeAsync(async () => {
