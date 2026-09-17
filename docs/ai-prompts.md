@@ -2,8 +2,8 @@
 
 `docs/ai-process.md` describes the method and what it caught. This file is the raw
 material behind it: the standing configuration every agent worked under, the prompts
-that opened each phase, the shape of a per-task dispatch, and — the part that
-actually mattered — the corrections that were fed back when the output was wrong.
+that opened each phase, the shape of a per-task dispatch, and the one question every
+review was made to ask.
 
 ---
 
