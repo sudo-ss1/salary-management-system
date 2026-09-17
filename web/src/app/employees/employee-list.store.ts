@@ -83,6 +83,33 @@ export class EmployeeListStore {
     this.page.set(page);
   }
 
+  /**
+   * Clears search and all four filters in one go.
+   *
+   * Sort, page size and direction are deliberately left alone: they are how
+   * the user prefers to read the list, not a narrowing of it. Resetting them
+   * would undo a choice nobody asked to undo. The page returns to the first,
+   * since the reset set is larger than what was on screen.
+   *
+   * hasNarrowing() is what the control binds its disabled state to, so the
+   * two can never disagree about whether there is anything to clear.
+   */
+  clearFilters(): void {
+    this.search.set('');
+    this.country.set(null);
+    this.department.set(null);
+    this.level.set(null);
+    this.status.set(null);
+    this.page.set(0);
+  }
+
+  readonly hasNarrowing = computed(() =>
+    this.search().trim() !== ''
+    || this.country() !== null
+    || this.department() !== null
+    || this.level() !== null
+    || this.status() !== null);
+
   setSize(size: number): void {
     this.size.set(size);
     this.page.set(0);

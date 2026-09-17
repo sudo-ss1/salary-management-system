@@ -3,6 +3,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { apiErrorInterceptor } from '../core/api-error.interceptor';
 import { RecordRaiseDialogComponent } from './record-raise-dialog.component';
 
@@ -18,6 +19,9 @@ describe('RecordRaiseDialogComponent', () => {
         provideHttpClient(withInterceptors([apiErrorInterceptor])),
         provideHttpClientTesting(),
         provideNoopAnimations(),
+        // The datepicker needs an adapter; app.config.ts provides it in the
+        // app, but a TestBed builds its own injector.
+        provideNativeDateAdapter(),
         { provide: MatDialogRef, useValue: dialogRef },
         {
           provide: MAT_DIALOG_DATA,
@@ -34,7 +38,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('sends the salary version, not the employee version', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: new Date(2026, 0, 1),
                                        changeReason: 'Promotion' };
 
     fixture.componentInstance.submit();
@@ -67,7 +71,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('omits changeReason from the request body when left blank', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: new Date(2026, 0, 1),
                                        changeReason: '' };
 
     fixture.componentInstance.submit();
@@ -82,7 +86,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('closes and reports success once the raise is recorded', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: new Date(2026, 0, 1),
                                        changeReason: '' };
 
     fixture.componentInstance.submit();
@@ -94,7 +98,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('keeps the dialog open and shows why when the server rejects the date', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2024-01-01',
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: new Date(2024, 0, 1),
                                        changeReason: '' };
 
     fixture.componentInstance.submit();
@@ -112,7 +116,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('disables cancel while the raise is in flight, so it cannot be used to dodge a save', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: new Date(2026, 0, 1),
                                        changeReason: '' };
 
     fixture.componentInstance.submit();
@@ -130,7 +134,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('shows the server field errors next to the offending inputs, mapping the nested salary.amount key', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '', effectiveFrom: '', changeReason: '' };
+    fixture.componentInstance.form = { amount: '', effectiveFrom: null, changeReason: '' };
 
     fixture.componentInstance.submit();
     mock.expectOne('/api/employees/7/salary').flush(
@@ -156,7 +160,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('surfaces a field error nothing renders instead of failing silently', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: new Date(2026, 0, 1),
                                        changeReason: '' };
 
     fixture.componentInstance.submit();
@@ -182,7 +186,7 @@ describe('RecordRaiseDialogComponent', () => {
   it('reports a replayed submission as a conflict rather than applying it twice', () => {
     const fixture = TestBed.createComponent(RecordRaiseDialogComponent);
     fixture.detectChanges();
-    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: '2026-01-01',
+    fixture.componentInstance.form = { amount: '4640625.00', effectiveFrom: new Date(2026, 0, 1),
                                        changeReason: '' };
 
     fixture.componentInstance.submit();

@@ -1,0 +1,54 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e4]:
+    - link "Payscope" [ref=f1e5] [cursor=pointer]:
+      - /url: /employees
+    - navigation [ref=f1e6]:
+      - link "Employees" [ref=f1e7] [cursor=pointer]:
+        - /url: /employees
+      - link "Insights" [ref=f1e11] [cursor=pointer]:
+        - /url: /insights
+  - main [ref=f1e15]:
+    - generic [ref=f1e16]:
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]:
+          - heading "Employees" [level=1] [ref=f1e19]
+          - generic [ref=f1e20]: 0 employees
+        - link "Add employee" [ref=f1e22] [cursor=pointer]:
+          - /url: /employees/new
+      - generic [ref=f1e26]:
+        - generic [ref=f1e29]:
+          - generic: Search name, email or employee number
+          - textbox "Search name, email or employee number" [ref=f1e32]
+        - generic [ref=f1e34]:
+          - generic [ref=f1e36]:
+            - generic [ref=f1e39] [cursor=pointer]:
+              - generic: Country
+              - combobox "Country" [ref=f1e42]:
+                - generic [ref=f1e43]: All countries
+            - generic [ref=f1e53] [cursor=pointer]:
+              - generic: Department
+              - combobox "Department" [ref=f1e56]:
+                - generic [ref=f1e57]: All departments
+            - generic [ref=f1e67] [cursor=pointer]:
+              - generic: Level
+              - combobox "Level" [ref=f1e70]:
+                - generic [ref=f1e71]: All levels
+            - generic [ref=f1e81] [cursor=pointer]:
+              - generic: Status
+              - combobox "Status" [ref=f1e84]:
+                - generic [ref=f1e85]: Active and inactive
+          - generic [ref=f1e95] [cursor=pointer]:
+            - generic: Sort by
+            - combobox "Sort by" [ref=f1e98]:
+              - generic [ref=f1e99]: Name
+      - progressbar [ref=f1e109]
+      - group [ref=f1e124]:
+        - generic [ref=f1e126]:
+          - generic [ref=f1e127]:
+            - generic [ref=f1e128]: "Items per page:"
+            - combobox "Items per page:" [ref=f1e133] [cursor=pointer]:
+              - generic [ref=f1e134]: "25"
+          - generic [ref=f1e142]:
+            - generic [ref=f1e143]: 0 of 0
+            - button "Previous page" [disabled] [ref=f1e144]
+            - button "Next page" [disabled] [ref=f1e149]

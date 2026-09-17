@@ -127,6 +127,56 @@ describe('EmployeeListComponent', () => {
     expect(harness.routeNativeElement!.querySelector('th.numeric-col')).not.toBeNull();
   }));
 
+  /**
+   * Flushes every request still in flight. Restoring a url can emit more than
+   * once, and switchMap cancels the superseded ones - a cancelled request
+   * refuses a flush, so they must be filtered out rather than counted on.
+   */
+  function settleRequests(): void {
+    mock.match(r => r.url === '/api/employees')
+      .filter(r => !r.cancelled)
+      .forEach(r => r.flush(PAGE));
+  }
+
+  it('clears search and every filter with one control, and returns to the first page', fakeAsync(async () => {
+    const harness = await open('/employees?country=IN&department=ENGINEERING&level=SENIOR&status=ACTIVE&q=asha&page=3');
+    tick(300);
+    settleRequests();
+    harness.detectChanges();
+
+    const reset = harness.routeNativeElement!.querySelector<HTMLButtonElement>('button.reset')!;
+    expect(reset.disabled).toBe(false);
+    reset.click();
+    tick(300);
+    harness.detectChanges();
+
+    const live = mock.match(r => r.url === '/api/employees').filter(r => !r.cancelled);
+    const request = live[live.length - 1];
+    // Proven by what goes to the server, not by the store's own fields: a
+    // reset that cleared state without re-querying would leave the old rows.
+    for (const gone of ['country', 'department', 'level', 'status', 'q']) {
+      expect(request.request.params.has(gone)).toBe(false);
+    }
+    expect(request.request.params.get('page')).toBe('0');
+    // Sort is how they read the list, not a narrowing of it - it must survive.
+    expect(request.request.params.get('sort')).toBe('FULL_NAME');
+    request.flush(PAGE);
+
+    harness.detectChanges();
+    expect(harness.routeNativeElement!
+      .querySelector<HTMLButtonElement>('button.reset')!.disabled).toBe(true);
+  }));
+
+  it('disables reset when nothing is narrowing the list', fakeAsync(async () => {
+    const harness = await open();
+    tick(300);
+    mock.expectOne(r => r.url === '/api/employees').flush(PAGE);
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement!
+      .querySelector<HTMLButtonElement>('button.reset')!.disabled).toBe(true);
+  }));
+
   it('reports the server-side total rather than the number of rows on screen', fakeAsync(async () => {
     const harness = await open();
     tick(300);

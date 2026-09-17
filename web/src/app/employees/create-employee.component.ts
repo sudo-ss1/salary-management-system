@@ -6,7 +6,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
+import { toIsoDate } from '../shared/dates';
 import { COUNTRIES, DEPARTMENTS, EMPLOYMENT_TYPES, LEVELS, ROLES, currencyForCountry } from '../shared/reference';
 import { CreateEmployeeStore } from './create-employee.store';
 
@@ -24,14 +26,14 @@ interface FormState {
   role: string;
   level: string;
   employmentType: string;
-  hireDate: string;
+  hireDate: Date | null;
   salaryAmount: string;
-  salaryEffectiveFrom: string;
+  salaryEffectiveFrom: Date | null;
 }
 
 const EMPTY_FORM: FormState = {
   employeeNumber: '', fullName: '', email: '', department: '', role: '', level: '',
-  employmentType: '', hireDate: '', salaryAmount: '', salaryEffectiveFrom: '',
+  employmentType: '', hireDate: null, salaryAmount: '', salaryEffectiveFrom: null,
 };
 
 @Component({
@@ -40,6 +42,7 @@ const EMPTY_FORM: FormState = {
   imports: [
     FormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule,
+    MatDatepickerModule,
   ],
   providers: [CreateEmployeeStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -145,7 +148,10 @@ const EMPTY_FORM: FormState = {
 
         <mat-form-field appearance="outline" class="field-narrow">
           <mat-label>Hire date</mat-label>
-          <input matInput type="date" [(ngModel)]="form.hireDate" [errorStateMatcher]="alwaysShowErrors" />
+          <input matInput [matDatepicker]="hirePicker" [max]="today"
+                 [(ngModel)]="form.hireDate" [errorStateMatcher]="alwaysShowErrors" />
+          <mat-datepicker-toggle matIconSuffix [for]="hirePicker" />
+          <mat-datepicker #hirePicker />
           <mat-hint>Not in the future</mat-hint>
           @if (store.fieldErrors()['hireDate']; as message) {
             <mat-error>{{ message }}</mat-error>
@@ -169,8 +175,12 @@ const EMPTY_FORM: FormState = {
 
         <mat-form-field appearance="outline" class="field-narrow">
           <mat-label>Effective from</mat-label>
-          <input matInput type="date" [(ngModel)]="form.salaryEffectiveFrom"
-                 [errorStateMatcher]="alwaysShowErrors" />
+          <!-- Bounded by whatever hire date is currently chosen, so the pair
+               cannot be made inconsistent in the first place. -->
+          <input matInput [matDatepicker]="startPicker" [min]="form.hireDate"
+                 [(ngModel)]="form.salaryEffectiveFrom" [errorStateMatcher]="alwaysShowErrors" />
+          <mat-datepicker-toggle matIconSuffix [for]="startPicker" />
+          <mat-datepicker #startPicker />
           <mat-hint>On/after hire date</mat-hint>
           @if (store.fieldErrors()['salaryEffectiveFrom']; as message) {
             <mat-error>{{ message }}</mat-error>
@@ -221,6 +231,8 @@ export class CreateEmployeeComponent {
   protected readonly levels = LEVELS;
   protected readonly employmentTypes = EMPLOYMENT_TYPES;
   protected readonly alwaysShowErrors = new AlwaysShowErrorStateMatcher();
+  /** Captured once on open: a hire date in the future is rejected server-side. */
+  protected readonly today = new Date();
 
   // A signal, not a plain property like the rest of `form`: currency() must
   // recompute whenever it changes, which only works if reading it is a
@@ -249,11 +261,11 @@ export class CreateEmployeeComponent {
         role: this.form.role,
         level: this.form.level,
         employmentType: this.form.employmentType,
-        hireDate: this.form.hireDate,
+        hireDate: toIsoDate(this.form.hireDate),
         // The amount is never parsed - it travels from the input straight
         // through to the request body as the same string.
         salary: { amount: this.form.salaryAmount, currency: this.currency() },
-        salaryEffectiveFrom: this.form.salaryEffectiveFrom,
+        salaryEffectiveFrom: toIsoDate(this.form.salaryEffectiveFrom),
       },
       id => void this.router.navigate(['/employees', id]),
     );

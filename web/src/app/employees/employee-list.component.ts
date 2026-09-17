@@ -54,6 +54,17 @@ import { EmployeeSort, SortDirection } from './employee.models';
             }
           </mat-select>
         </mat-form-field>
+
+        <!--
+          Disabled when nothing is narrowing the list, so the control tells the
+          user whether anything is filtered without them having to read five
+          other controls to find out. Sort is not cleared - that is how they
+          prefer to read the list, not a narrowing of it.
+        -->
+        <button mat-stroked-button class="reset" type="button"
+                [disabled]="!store.hasNarrowing()" (click)="onReset()">
+          Reset
+        </button>
       </div>
     </div>
 
@@ -159,6 +170,10 @@ import { EmployeeSort, SortDirection } from './employee.models';
       gap: 4px;
       white-space: nowrap;
     }
+
+    // Aligns with the form fields beside it, which carry their own subscript
+    // space beneath - without this the button sits low against them.
+    .reset { align-self: flex-start; margin-top: 0.5rem; }
 
     .search { width: 100%; }
     .search .mat-mdc-text-field-wrapper { background: transparent; }
@@ -278,6 +293,10 @@ export class EmployeeListComponent {
 
   protected onFilterChange(change: FilterChange): void {
     this.store.setFilter(change.key, change.value);
+  }
+
+  protected onReset(): void {
+    this.store.clearFilters();
   }
 
   protected onSort(sort: EmployeeSort): void {

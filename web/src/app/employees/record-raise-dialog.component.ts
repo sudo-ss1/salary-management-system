@@ -4,8 +4,10 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ApiError } from '../core/problem-detail';
 import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
+import { fromIsoDate, toIsoDate } from '../shared/dates';
 import { EmployeeApiService } from './employee-api.service';
 
 export interface RecordRaiseData {
@@ -26,7 +28,10 @@ const RENDERED_FIELDS = new Set(['amount', 'salary.amount', 'effectiveFrom', 'ch
 @Component({
   selector: 'app-record-raise-dialog',
   standalone: true,
-  imports: [FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [
+    FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule,
+    MatDatepickerModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h2 mat-dialog-title>Record a new salary</h2>
@@ -43,8 +48,10 @@ const RENDERED_FIELDS = new Set(['amount', 'salary.amount', 'effectiveFrom', 'ch
 
       <mat-form-field appearance="outline">
         <mat-label>Effective from</mat-label>
-        <input matInput type="date" [(ngModel)]="form.effectiveFrom"
-               [errorStateMatcher]="alwaysShowErrors" />
+        <input matInput [matDatepicker]="effectivePicker" [min]="earliest"
+               [(ngModel)]="form.effectiveFrom" [errorStateMatcher]="alwaysShowErrors" />
+        <mat-datepicker-toggle matIconSuffix [for]="effectivePicker" />
+        <mat-datepicker #effectivePicker />
         <mat-hint>Must be after {{ data.currentEffectiveFrom }}</mat-hint>
         @if (effectiveFromError(); as message) {
           <mat-error>{{ message }}</mat-error>
@@ -96,7 +103,24 @@ export class RecordRaiseDialogComponent {
   protected readonly effectiveFromError = computed(() => this.fieldErrors()['effectiveFrom']);
   protected readonly changeReasonError = computed(() => this.fieldErrors()['changeReason']);
 
-  form = { amount: '', effectiveFrom: '', changeReason: '' };
+  // A Date while the picker owns it, an ISO string only at the API boundary.
+  form = { amount: '', effectiveFrom: null as Date | null, changeReason: '' };
+
+  /**
+   * The server requires the new salary to start strictly after the current
+   * one, so the calendar disables everything up to and including that day
+   * rather than letting the user pick a date the server will reject.
+   */
+  protected readonly earliest = this.dayAfter(this.data.currentEffectiveFrom);
+
+  private dayAfter(iso: string): Date | null {
+    const date = fromIsoDate(iso);
+    if (!date) {
+      return null;
+    }
+    date.setDate(date.getDate() + 1);
+    return date;
+  }
 
   submit(): void {
     this.saving.set(true);
@@ -108,7 +132,7 @@ export class RecordRaiseDialogComponent {
         // Currency is fixed to the employee's own: the server rejects a
         // mismatch, so offering a choice would only invite a 400.
         salary: { amount: this.form.amount, currency: this.data.currency },
-        effectiveFrom: this.form.effectiveFrom,
+        effectiveFrom: toIsoDate(this.form.effectiveFrom),
         changeReason: this.form.changeReason || undefined,
         salaryVersion: this.data.salaryVersion,
       })

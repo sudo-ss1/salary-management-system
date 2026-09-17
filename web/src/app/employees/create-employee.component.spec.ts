@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { apiErrorInterceptor } from '../core/api-error.interceptor';
 import { CreateEmployeeComponent } from './create-employee.component';
 
@@ -21,6 +22,9 @@ describe('CreateEmployeeComponent', () => {
         provideHttpClient(withInterceptors([apiErrorInterceptor])),
         provideHttpClientTesting(),
         provideNoopAnimations(),
+        // The datepicker needs an adapter; app.config.ts provides it in the
+        // app, but a TestBed builds its own injector.
+        provideNativeDateAdapter(),
         provideRouter([
           { path: 'employees/new', component: CreateEmployeeComponent },
           { path: 'employees/:id', component: EmployeeDetailStubComponent },
@@ -37,8 +41,8 @@ describe('CreateEmployeeComponent', () => {
     component.form = {
       employeeNumber: 'E-3001', fullName: 'Priya Nair', email: 'priya@acme.test',
       department: 'ENGINEERING', role: 'SOFTWARE_ENGINEER', level: 'SENIOR',
-      employmentType: 'FULL_TIME', hireDate: '2024-03-01', salaryAmount: '3500000.00',
-      salaryEffectiveFrom: '2024-03-01',
+      employmentType: 'FULL_TIME', hireDate: new Date(2024, 2, 1), salaryAmount: '3500000.00',
+      salaryEffectiveFrom: new Date(2024, 2, 1),
     };
     component.onCountryChange('IN');
   }
