@@ -4,7 +4,7 @@ Salary management and pay insights for an HR team operating across several
 countries. See `requirements.md` for scope and `docs/superpowers/specs/` for the
 design.
 
-**Live application:** <https://payscope-mv6p.onrender.com> · **Demo video:** _<!-- link -->_
+**Live application:** <https://payscope-mv6p.onrender.com> · **Demo video:** <https://www.loom.com/share/d7ce06d75a7e48a395437f67275775b3>
 
 The hosted instance runs on a free tier and sleeps when idle, so the first
 request after a quiet spell takes up to a minute to wake. Every request after

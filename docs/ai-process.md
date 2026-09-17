@@ -40,7 +40,7 @@ passes.
 | | Backend | Frontend |
 |---|---|---|
 | Commits | 61 | 101 |
-| Tests | 162 | 158 |
+| Tests | 162 | 186 |
 | Reviews | per-task + final | per-task + final |
 
 Tests are integration-first: the backend runs against real PostgreSQL via Testcontainers, never
@@ -153,8 +153,9 @@ plan's own definition of done, unmet, because nothing ever ran it.
 
 ## Verification that earned its keep
 
-Four defects were invisible to 163 passing frontend tests and only appeared when the application
-was actually run against the real backend with 10,000 seeded employees:
+Four defects were invisible to the 163 frontend tests passing at the time, and appeared only when
+the application
+was run against the real backend with 10,000 seeded employees:
 
 - **compa-ratio crossed the wire as a JSON number**, not a string. Every frontend fixture used
   `'1.0000'`; the API sent `1.0`. Trailing zeros vanished in the UI — a ratio of exactly 1.0020
