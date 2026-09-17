@@ -108,6 +108,22 @@ describe('EmployeeListComponent', () => {
     expect(document.body.textContent).toContain('120%');
   }));
 
+  it('keeps the header label flush right with the values, by leading with the control', fakeAsync(async () => {
+    const harness = await open();
+    tick(300);
+    mock.expectOne(r => r.url === '/api/employees').flush(PAGE);
+    harness.detectChanges();
+
+    // The column is right-aligned, so whatever comes last sets the right edge.
+    // With the control trailing, the label was pushed left by a button's width
+    // and stopped lining up with the percentages beneath it.
+    const header = harness.routeNativeElement!.querySelector('.header-with-info')!;
+    const control = header.querySelector('app-compa-ratio-info')!;
+    const position = control.compareDocumentPosition(header.lastChild!);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(header.lastChild!.textContent!.trim()).toBe('Compa-ratio');
+  }));
+
   it('reports the server-side total rather than the number of rows on screen', fakeAsync(async () => {
     const harness = await open();
     tick(300);

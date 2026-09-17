@@ -102,8 +102,8 @@ import { EmployeeSort, SortDirection } from './employee.models';
                    the record behind it. -->
               <th mat-header-cell *matHeaderCellDef class="numeric-col">
                 <span class="header-with-info">
-                  Compa-ratio
                   <app-compa-ratio-info />
+                  Compa-ratio
                 </span>
               </th>
               <td mat-cell *matCellDef="let row" class="numeric-col">
@@ -146,15 +146,18 @@ import { EmployeeSort, SortDirection } from './employee.models';
       (page)="onPage($event)" />
   `,
   styles: [`
+    // The control sits BEFORE the label, not after it. This column is
+    // right-aligned, so whatever comes last defines the right edge - with the
+    // control trailing, "Compa-ratio" was pushed left by the width of a button
+    // and no longer shared an edge with the percentages beneath it. Leading,
+    // the label ends exactly where the values do and the control overhangs
+    // into the column's own empty space on the left.
     .header-with-info {
       display: inline-flex;
       align-items: center;
       gap: 2px;
       white-space: nowrap;
     }
-    // A mat-icon-button carries its own touch-target padding. Left alone it
-    // pushes the header text off the alignment the numbers below it use.
-    .header-with-info app-compa-ratio-info { margin-right: -0.5rem; }
 
     .search { width: 100%; }
     .search .mat-mdc-text-field-wrapper { background: transparent; }
