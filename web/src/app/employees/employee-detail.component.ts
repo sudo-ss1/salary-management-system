@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
-import { InfoButtonComponent } from '../shared/info-button.component';
+import { CompaRatioInfoComponent } from '../shared/compa-ratio-info.component';
 import { AlwaysShowErrorStateMatcher } from '../shared/always-error-state-matcher';
 import {
   compaRatioGap, compaRatioPercent, compaRatioShort, isOutOfBand,
@@ -28,7 +28,7 @@ import { EmployeeDetail } from './employee.models';
   imports: [
     FormsModule, RouterLink, MatCardModule, MatTabsModule, MatFormFieldModule, MatInputModule,
     MatSelectModule, MatButtonModule, MoneyPipe, StatePanelComponent, SalaryHistoryComponent,
-    InfoButtonComponent,
+    CompaRatioInfoComponent,
   ],
   providers: [EmployeeDetailStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -102,24 +102,8 @@ import { EmployeeDetail } from './employee.models';
                   <span class="compa-ratio__label">of band midpoint</span>
                 </div>
 
-                <app-info-button label="What compa-ratio means">
-                  <h3 class="info-panel__title">Compa-ratio</h3>
-                  <p>
-                    Someone's pay compared with the <strong>midpoint</strong> of their pay band —
-                    the band set for their role, level and country.
-                  </p>
-                  <p>
-                    <strong>100%</strong> is exactly at the midpoint. Below <strong>80%</strong> or
-                    above <strong>120%</strong> is flagged as an outlier and worth a look: usually
-                    underpayment on one side, and someone near the ceiling for their level on the
-                    other.
-                  </p>
-                  <p>
-                    Both figures are in the same local currency, so no exchange rate is involved.
-                    That is what makes it comparable across countries — 90% means the same thing in
-                    Bengaluru as it does in London.
-                  </p>
-                </app-info-button>
+
+                <app-compa-ratio-info />
                 <p>
                   Paid {{ compaGap(person.compaRatio ?? '') }} for {{ label(person.level) }}
                   {{ label(person.role) }} in {{ person.countryCode }} — a compa-ratio of
@@ -258,7 +242,7 @@ import { EmployeeDetail } from './employee.models';
     .pay-figure__secondary { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-medium); }
 
     .compa-explain { display: flex; align-items: center; gap: var(--space-3); }
-    .compa-explain app-info-button { flex-shrink: 0; }
+    .compa-explain app-compa-ratio-info { flex-shrink: 0; }
     .compa-explain p { margin: 0; color: var(--mat-sys-on-surface-variant); }
 
     .compa-ratio {

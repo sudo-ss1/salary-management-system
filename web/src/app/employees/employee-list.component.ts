@@ -12,6 +12,7 @@ import { MoneyPipe } from '../core/money.pipe';
 import { StatePanelComponent } from '../shared/state-panel.component';
 import { COUNTRIES, SORT_OPTIONS, titleCase } from '../shared/reference';
 import { compaRatioPercent, isOutOfBand } from '../shared/compa-ratio-bands';
+import { CompaRatioInfoComponent } from '../shared/compa-ratio-info.component';
 import { FilterBarComponent, FilterChange } from './filter-bar.component';
 import { EmployeeListStore } from './employee-list.store';
 import { EmployeeSort, SortDirection } from './employee.models';
@@ -22,6 +23,7 @@ import { EmployeeSort, SortDirection } from './employee.models';
   imports: [
     RouterLink, MatTableModule, MatPaginatorModule, MatFormFieldModule, MatInputModule,
     MatSelectModule, MatChipsModule, MatButtonModule, MoneyPipe, StatePanelComponent, FilterBarComponent,
+    CompaRatioInfoComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -95,7 +97,15 @@ import { EmployeeSort, SortDirection } from './employee.models';
             </ng-container>
 
             <ng-container matColumnDef="compaRatio">
-              <th mat-header-cell *matHeaderCellDef class="numeric-col">Compa-ratio</th>
+              <!-- The list is where most people meet the term for the first
+                   time, so the explanation belongs on the column, not only on
+                   the record behind it. -->
+              <th mat-header-cell *matHeaderCellDef class="numeric-col">
+                <span class="header-with-info">
+                  Compa-ratio
+                  <app-compa-ratio-info />
+                </span>
+              </th>
               <td mat-cell *matCellDef="let row" class="numeric-col">
                 @if (row.compaRatio) {
                   <!-- A percentage of the band midpoint, scanned down a column of
@@ -136,6 +146,16 @@ import { EmployeeSort, SortDirection } from './employee.models';
       (page)="onPage($event)" />
   `,
   styles: [`
+    .header-with-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      white-space: nowrap;
+    }
+    // A mat-icon-button carries its own touch-target padding. Left alone it
+    // pushes the header text off the alignment the numbers below it use.
+    .header-with-info app-compa-ratio-info { margin-right: -0.5rem; }
+
     .search { width: 100%; }
     .search .mat-mdc-text-field-wrapper { background: transparent; }
 

@@ -87,6 +87,27 @@ describe('EmployeeListComponent', () => {
     expect(ashaRow.querySelectorAll('.compa-ratio.out-of-band').length).toBe(0); // Asha at 1.00
   }));
 
+  it('explains compa-ratio from the column header, where most readers meet the term first', fakeAsync(async () => {
+    const harness = await open();
+    tick(300);
+    mock.expectOne(r => r.url === '/api/employees').flush(PAGE);
+    harness.detectChanges();
+
+    expect(document.body.textContent).not.toContain('is exactly at the midpoint');
+
+    const info = harness.routeNativeElement!
+      .querySelector<HTMLButtonElement>('th app-compa-ratio-info button')!;
+    expect(info.getAttribute('aria-label')).toBe('What compa-ratio means');
+    info.click();
+    harness.detectChanges();
+
+    // Same wording as the employee record, because it is the same component -
+    // two copies of this explanation would drift apart.
+    expect(document.body.textContent).toContain('100%');
+    expect(document.body.textContent).toContain('80%');
+    expect(document.body.textContent).toContain('120%');
+  }));
+
   it('reports the server-side total rather than the number of rows on screen', fakeAsync(async () => {
     const harness = await open();
     tick(300);
