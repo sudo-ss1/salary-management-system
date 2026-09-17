@@ -116,6 +116,30 @@ describe('EmployeeDetailComponent', () => {
     expect(text).not.toContain('converted at');
   }));
 
+  it('explains what a compa-ratio is on demand, rather than assuming the reader knows', fakeAsync(async () => {
+    const harness = await RouterTestingHarness.create('/employees/7');
+    mock.expectOne('/api/employees/7').flush(DETAIL);
+    harness.detectChanges();
+
+    // Closed by default: the explanation is there for whoever needs it and
+    // costs nothing to whoever does not.
+    expect(document.body.textContent).not.toContain('is exactly at the midpoint');
+
+    const info = harness.routeNativeElement!
+      .querySelector<HTMLButtonElement>('app-info-button button')!;
+    expect(info.getAttribute('aria-label')).toBe('What compa-ratio means');
+    info.click();
+    harness.detectChanges();
+
+    // The band edges named here must agree with the badge's own thresholds;
+    // an explanation that contradicts the colouring is worse than none.
+    const panel = document.body.textContent!;
+    expect(panel).toContain('100%');
+    expect(panel).toContain('80%');
+    expect(panel).toContain('120%');
+    expect(panel).toContain('midpoint');
+  }));
+
   it('shows hire date, employee number and status as read-only facts about the record', fakeAsync(async () => {
     const harness = await RouterTestingHarness.create('/employees/7');
     mock.expectOne('/api/employees/7').flush(DETAIL);

@@ -191,3 +191,26 @@ mat-form-field:not(:has(mat-error)) {
   --mat-form-field-outlined-error-caret-color: var(--mat-sys-primary);
   --mat-form-field-error-text-color: var(--mat-sys-on-surface-variant);
 }
+
+// The panel inside an InfoButtonComponent's menu. Styled globally because the
+// menu renders into an overlay at the document root, outside the reach of any
+// component's encapsulated styles.
+.info-panel {
+  max-width: 22rem;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  white-space: normal;
+  cursor: auto;
+
+  p {
+    margin: var(--space-3) 0 0;
+    font: var(--mat-sys-body-medium);
+    color: var(--mat-sys-on-surface-variant);
+    line-height: 1.5;
+  }
+
+  &__title {
+    margin: var(--space-2) 0 0;
+    font: var(--mat-sys-title-small);
+    color: var(--mat-sys-on-surface);
+  }
+}
