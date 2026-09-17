@@ -20,7 +20,7 @@ Four of its rules changed outcomes measurably, and are worth reading in the file
 |---|---|
 | *"Integration tests run against real PostgreSQL via Testcontainers. H2 is forbidden."* | A green suite that proves nothing: the design depends on `percentile_cont`, partial unique indexes and `SELECT … FOR SHARE`, none of which H2 reproduces faithfully. |
 | *"Money is `BigDecimal` in Java and a string on the wire. Never `double`, never a JS `number`."* | Silent precision loss at the JSON boundary. The one place a `double` was unavoidable is isolated and documented in [ADR-0008](adr/0008-accepting-a-double-precision-step-inside-percentile-cont.md). |
-| *"A test must fail for the reason its name claims. Prove it by breaking the code."* | Tests that pass for the wrong reason. This is the single highest-yield line in the file — see §5. |
+| *"A test must fail for the reason its name claims. Prove it by breaking the code."* | Tests that pass for the wrong reason. This is the single highest-yield line in the file; `ai-process.md` records how it was applied. |
 | *"Commit locally. Never push. Do not add, change or inspect remotes."* | An agent publishing an unreviewed branch. Enforced, not advisory: the repo has no remotes. |
 
 Credentials are handled by the same file: `.env` is git-ignored before the first
@@ -117,66 +117,7 @@ of both the correct and the incorrect implementation.
 
 ---
 
-## 5. Validation: sabotage as the standard of proof
-
-A passing test is a claim, not evidence. The standing rule is that a test must be
-shown to fail when the behaviour it names is removed. Worked examples:
-
-| Claim | Sabotage | Result |
-|---|---|---|
-| "Superseded search requests are cancelled" | Swap `switchMap` for `mergeMap` | Red. Claim proven. |
-| "The list avoids N+1" | — | A count of rows would pass either way. Replaced with a **statement count**: a page of 10 and a page of 100 must both cost exactly 2. |
-| "The chart library works without zone.js" | — | **Could not be sabotaged.** The test proved nothing; it was the *browser* that proved it. Recorded honestly in [ADR-0009](adr/0009-zoneless-angular.md) rather than left looking green. |
-
-Two "green" signals turned out to be hollow, and both are written up in
-`ai-process.md` instead of quietly deleted. One suite was even reported green
-against a working tree that had an uncommitted test rewritten to assert the bug —
-the lesson being that `git log` is not `git status`.
-
----
-
-## 6. Refinement: the corrections that changed the build
-
-The prompts below are quoted verbatim, typos and all, because a sanitised prompt log
-misrepresents how this actually goes. Each one caught something that ~320 passing
-tests and a six-pass whole-branch review had not.
-
-> **"UI/UX is not upto the level, what is this, and its so minimal, without any design"**
-
-`web/src/styles.scss` was **80 bytes** — the CLI's placeholder comment. Angular
-Material had no theme at all, so every component rendered with structural CSS only:
-browser-serif typography, black outlines, overlays colliding with the page. Every
-automated check passed, because every automated check asserted DOM content and never
-appearance. Fixed by building the theme and a design system on top of it; the cause
-is recorded because it generalises — **a diff-scoped review cannot see an absence.**
-
-> **"in the list of employess i am seeing Asha Adebayo name to often"**
-
-Diagnosed as a data-quality bug, not cosmetics: the seed generator held 20 given
-names × 20 family names = 400 combinations for 10,000 people, so the same person
-appeared 28 times. Widened to 148 × 156 = 23,088. Distinct names per 100 rows went
-from 4 to 79–89; worst-case repetition from 28× to 3×.
-
-> **"why you have given two buttons deactiavte/delete"**
-
-Correct, and my justification for the second button had been backwards — I had
-argued it was worth surfacing because the API method was otherwise dead code, which
-is reasoning from the implementation toward the user instead of the reverse.
-Requirements §3 lists *deactivate*; delete is not among them. Removed from the
-client entirely. See `requirements.md` §5.
-
-> **"you should have created other branch for the front end"**
-
-Also correct. The branch was split retroactively into `feat/payscope-backend` and
-`feat/payscope-frontend`.
-
-The pattern across all four: automation verified *behaviour*, and a human verified
-*result*. Nothing in the first category catches an unstyled application, a name
-appearing 28 times, or a button that should not exist.
-
----
-
-## 7. What I would change about the prompting
+## 5. What I would change about the prompting
 
 - **Demand a screenshot at task one, not task ten.** The single cheapest fix
   available. A thin vertical slice that had to *look* right would have surfaced the
